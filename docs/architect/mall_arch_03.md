@@ -1,129 +1,187 @@
-学习不走弯路，[关注公众号](#公众号) 回复「学习路线」，获取mall项目专属学习路线！
+## 📚 Học tập không đi đường vòng
 
-# mall整合Redis实现缓存功能
+👉 **[Theo dõi公众号](#公众号)** và **trả lời “学习路线”** để nhận **lộ trình học RIÊNG cho dự án mall**!
 
-> 本文主要讲解mall整合Redis的过程，以短信验证码的存储验证为例。
+---
 
-## Redis的安装和启动
+# ⚡ Dự án mall: Tích hợp Redis để triển khai cơ chế cache
 
-> Redis是用C语言开发的一个高性能键值对数据库，可用于数据缓存，主要用于处理大量数据的高访问负载。
+> Bài viết này sẽ **dẫn bạn từng bước** tích hợp **Redis vào dự án mall**,
+> thông qua một ví dụ **rất thực tế**:
+>
+> 👉 **Lưu và xác thực mã OTP (SMS verification code)**.
 
+💡 Head First nói thẳng:
 
-- 下载Redis,下载地址：https://github.com/MicrosoftArchive/redis/releases
+> *Cái gì đọc nhiều – ghi ít → cho vào Redis!*
+> OTP chính là ví dụ kinh điển.
 
-![](../images/arch_screen_09.png)
+---
 
-- 下载完后解压到指定目录
+## 🧠 Redis là gì? Vì sao dùng Redis?
 
-![](../images/arch_screen_10.png)
+> **Redis** là một **database key–value** hiệu năng cao,
+> được viết bằng **C**, cực kỳ nhanh.
 
-- 在当前地址栏输入cmd后，执行redis的启动命令：redis-server.exe redis.windows.conf
+Redis thường dùng để:
 
-![](../images/arch_screen_11.png)
+* Cache dữ liệu
+* Lưu session
+* Lưu OTP / token
+* Giảm tải cho database chính
 
-## 整合Redis
+👉 Trong bài này, Redis đóng vai:
 
-### 添加项目依赖
-> 在pom.xml中新增Redis相关依赖
+> **“Nơi giữ OTP tạm thời”**
+
+---
+
+## 🧱 1. Cài đặt và khởi động Redis (Windows)
+
+### 📥 Bước 1: Tải Redis
+
+🔗 Link tải:
+[https://github.com/MicrosoftArchive/redis/releases](https://github.com/MicrosoftArchive/redis/releases)
+
+![Image](https://user-images.githubusercontent.com/515784/215540157-65f55297-cde2-49b3-8ab3-14dca7e11ee0.png)
+
+![Image](https://opengraph.githubassets.com/8ed7824a0bd4327adfd32af2e8585aedd2c06b82ff044c5569279c4ed6431c17/redis-windows/redis-windows)
+
+---
+
+### 📂 Bước 2: Giải nén Redis
+
+> Giải nén Redis vào **bất kỳ thư mục nào bạn muốn**
+
+![Image](https://docs.servicestack.net/img/pages/redis/install-wsl.png)
+
+![Image](https://i.sstatic.net/I0Btt.png)
+
+---
+
+### ▶️ Bước 3: Khởi động Redis
+
+> Mở **CMD tại thư mục Redis**, chạy lệnh:
+
+```bash
+redis-server.exe redis.windows.conf
+```
+
+![Image](https://i.sstatic.net/I0Btt.png)
+
+![Image](https://i.sstatic.net/RVHvS.png)
+
+👉 Thấy Redis chạy → OK
+👉 Không thấy lỗi → sẵn sàng dùng
+
+---
+
+## 🔌 2. Tích hợp Redis vào Spring Boot
+
+### 📦 Bước 1: Thêm dependency Redis
+
+> Mở `pom.xml` và thêm 👇
 
 ```xml
-<!--redis依赖配置-->
+<!-- Redis starter -->
 <dependency>
   <groupId>org.springframework.boot</groupId>
   <artifactId>spring-boot-starter-data-redis</artifactId>
 </dependency>
 ```
-### 修改SpringBoot配置文件
 
-> 在application.yml中添加Redis的配置及Redis中自定义key的配置。
-#### 在spring节点下添加Redis的配置
+💡 Head First note:
+
+> *Spring Boot + Redis Starter = gần như không cần config phức tạp*
+
+---
+
+### ⚙️ Bước 2: Cấu hình Redis trong `application.yml`
+
+#### 🔹 Cấu hình Redis server (trong `spring:`)
 
 ```yml
-  redis:
-    host: localhost # Redis服务器地址
-    database: 0 # Redis数据库索引（默认为0）
-    port: 6379 # Redis服务器连接端口
-    password: # Redis服务器连接密码（默认为空）
-    jedis:
-      pool:
-        max-active: 8 # 连接池最大连接数（使用负值表示没有限制）
-        max-wait: -1ms # 连接池最大阻塞等待时间（使用负值表示没有限制）
-        max-idle: 8 # 连接池中的最大空闲连接
-        min-idle: 0 # 连接池中的最小空闲连接
-    timeout: 3000ms # 连接超时时间（毫秒）
+redis:
+  host: localhost        # Địa chỉ Redis
+  database: 0            # Database index
+  port: 6379             # Port Redis
+  password:              # Mật khẩu (thường để trống)
+  jedis:
+    pool:
+      max-active: 8
+      max-wait: -1ms
+      max-idle: 8
+      min-idle: 0
+  timeout: 3000ms
 ```
 
-#### 在根节点下添加Redis自定义key的配置
+👉 Phần này nói cho Spring biết:
+
+> *Redis của tao đang ở đâu và kết nối thế nào*
+
+---
+
+#### 🔹 Cấu hình key Redis tùy chỉnh (ở root)
 
 ```yml
-# 自定义redis key
+# Custom redis key
 redis:
   key:
     prefix:
       authCode: "portal:authCode:"
     expire:
-      authCode: 120 # 验证码超期时间
+      authCode: 120   # OTP hết hạn sau 120s
 ```
 
-### 添加RedisService接口用于定义一些常用Redis操作
+💡 Head First nhớ:
+
+> *Key rõ ràng + prefix hợp lý = Redis gọn gàng, dễ quản lý*
+
+---
+
+## 🧩 3. Tạo RedisService – gói thao tác Redis lại
+
+> Ta **KHÔNG dùng Redis trực tiếp ở Service nghiệp vụ**
+> 👉 Tạo một lớp trung gian: `RedisService`
+
+### 📄 RedisService interface
 
 ```java
-package com.macro.mall.tiny.service;
-
-/**
- * redis操作Service,
- * 对象和数组都以json形式进行存储
- * Created by macro on 2018/8/7.
- */
 public interface RedisService {
-    /**
-     * 存储数据
-     */
+
+    // Lưu dữ liệu
     void set(String key, String value);
 
-    /**
-     * 获取数据
-     */
+    // Lấy dữ liệu
     String get(String key);
 
-    /**
-     * 设置超期时间
-     */
+    // Set thời gian hết hạn
     boolean expire(String key, long expire);
 
-    /**
-     * 删除数据
-     */
+    // Xóa key
     void remove(String key);
 
-    /**
-     * 自增操作
-     * @param delta 自增步长
-     */
+    // Tăng giá trị
     Long increment(String key, long delta);
-
 }
-
 ```
 
-### 注入StringRedisTemplate，实现RedisService接口
+💡 Head First note:
+
+> *RedisService = Adapter cho Redis*
+
+---
+
+## 🧠 4. Cài đặt RedisService bằng StringRedisTemplate
+
+> Spring đã chuẩn bị sẵn `StringRedisTemplate` cho bạn.
+
+### 🛠️ RedisServiceImpl
 
 ```java
-package com.macro.mall.tiny.service.impl;
-
-import com.macro.mall.tiny.service.RedisService;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.stereotype.Service;
-
-import java.util.concurrent.TimeUnit;
-
-/**
- * redis操作Service的实现类
- * Created by macro on 2018/8/7.
- */
 @Service
 public class RedisServiceImpl implements RedisService {
+
     @Autowired
     private StringRedisTemplate stringRedisTemplate;
 
@@ -149,155 +207,140 @@ public class RedisServiceImpl implements RedisService {
 
     @Override
     public Long increment(String key, long delta) {
-        return stringRedisTemplate.opsForValue().increment(key,delta);
+        return stringRedisTemplate.opsForValue().increment(key, delta);
     }
 }
-
 ```
 
-### 添加UmsMemberController
-> 添加根据电话号码获取验证码的接口和校验验证码的接口
+👉 Redis lúc này **đã sẵn sàng phục vụ nghiệp vụ**
+
+---
+
+## 🌐 5. Controller: API lấy & xác thực OTP
+
+### 📄 UmsMemberController
+
+> Ta tạo 2 API:
+
+* Lấy OTP theo số điện thoại
+* Kiểm tra OTP
 
 ```java
-package com.macro.mall.tiny.controller;
-
-import com.macro.mall.tiny.common.api.CommonResult;
-import com.macro.mall.tiny.service.UmsMemberService;
-import io.swagger.annotations.Api;
-import io.swagger.annotations.ApiOperation;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseBody;
-
-/**
- * 会员登录注册管理Controller
- * Created by macro on 2018/8/3.
- */
-@Controller
-@Api(tags = "UmsMemberController", description = "会员登录注册管理")
+@Api(tags = "UmsMemberController", description = "Đăng ký & đăng nhập")
 @RequestMapping("/sso")
 public class UmsMemberController {
-    @Autowired
-    private UmsMemberService memberService;
 
-    @ApiOperation("获取验证码")
-    @RequestMapping(value = "/getAuthCode", method = RequestMethod.GET)
-    @ResponseBody
+    @ApiOperation("Lấy mã OTP")
+    @GetMapping("/getAuthCode")
     public CommonResult getAuthCode(@RequestParam String telephone) {
         return memberService.generateAuthCode(telephone);
     }
 
-    @ApiOperation("判断验证码是否正确")
-    @RequestMapping(value = "/verifyAuthCode", method = RequestMethod.POST)
-    @ResponseBody
-    public CommonResult updatePassword(@RequestParam String telephone,
-                                 @RequestParam String authCode) {
-        return memberService.verifyAuthCode(telephone,authCode);
+    @ApiOperation("Xác thực mã OTP")
+    @PostMapping("/verifyAuthCode")
+    public CommonResult verify(
+        @RequestParam String telephone,
+        @RequestParam String authCode) {
+
+        return memberService.verifyAuthCode(telephone, authCode);
     }
 }
-
 ```
 
-### 添加UmsMemberService接口
+---
+
+## 🧠 6. Service xử lý logic OTP
+
+### 📄 UmsMemberService
 
 ```java
-package com.macro.mall.tiny.service;
-
-import com.macro.mall.tiny.common.api.CommonResult;
-
-/**
- * 会员管理Service
- * Created by macro on 2018/8/3.
- */
 public interface UmsMemberService {
 
-    /**
-     * 生成验证码
-     */
+    // Sinh OTP
     CommonResult generateAuthCode(String telephone);
 
-    /**
-     * 判断验证码和手机号码是否匹配
-     */
+    // Kiểm tra OTP
     CommonResult verifyAuthCode(String telephone, String authCode);
-
 }
-
 ```
 
-### 添加UmsMemberService接口的实现类UmsMemberServiceImpl
+---
 
-> 生成验证码时，将自定义的Redis键值加上手机号生成一个Redis的key,以验证码为value存入到Redis中，并设置过期时间为自己配置的时间（这里为120s）。校验验证码时根据手机号码来获取Redis里面存储的验证码，并与传入的验证码进行比对。
+### 🛠️ UmsMemberServiceImpl – logic chính
+
+> Đây là **trái tim của bài học**
+
+#### 🧠 Logic sinh OTP:
+
+1. Sinh 6 số ngẫu nhiên
+2. Key = `prefix + telephone`
+3. Value = OTP
+4. Set expire = 120s
 
 ```java
-package com.macro.mall.tiny.service.impl;
+redisService.set(prefix + telephone, otp);
+redisService.expire(prefix + telephone, 120);
+```
 
-import com.macro.mall.tiny.common.api.CommonResult;
-import com.macro.mall.tiny.service.RedisService;
-import com.macro.mall.tiny.service.UmsMemberService;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
+---
 
-import java.util.Random;
+#### 🧠 Logic kiểm tra OTP:
 
-/**
- * 会员管理Service实现类
- * Created by macro on 2018/8/3.
- */
-@Service
-public class UmsMemberServiceImpl implements UmsMemberService {
-    @Autowired
-    private RedisService redisService;
-    @Value("${redis.key.prefix.authCode}")
-    private String REDIS_KEY_PREFIX_AUTH_CODE;
-    @Value("${redis.key.expire.authCode}")
-    private Long AUTH_CODE_EXPIRE_SECONDS;
+1. Lấy OTP từ Redis
+2. So sánh với OTP người dùng nhập
+3. Đúng → OK
+4. Sai → Fail
 
-    @Override
-    public CommonResult generateAuthCode(String telephone) {
-        StringBuilder sb = new StringBuilder();
-        Random random = new Random();
-        for (int i = 0; i < 6; i++) {
-            sb.append(random.nextInt(10));
-        }
-        //验证码绑定手机号并存储到redis
-        redisService.set(REDIS_KEY_PREFIX_AUTH_CODE + telephone, sb.toString());
-        redisService.expire(REDIS_KEY_PREFIX_AUTH_CODE + telephone, AUTH_CODE_EXPIRE_SECONDS);
-        return CommonResult.success(sb.toString(), "获取验证码成功");
-    }
+```java
+String realAuthCode =
+    redisService.get(prefix + telephone);
+```
 
+💡 Head First kết luận:
 
-    //对输入的验证码进行校验
-    @Override
-    public CommonResult verifyAuthCode(String telephone, String authCode) {
-        if (StringUtils.isEmpty(authCode)) {
-            return CommonResult.failed("请输入验证码");
-        }
-        String realAuthCode = redisService.get(REDIS_KEY_PREFIX_AUTH_CODE + telephone);
-        boolean result = authCode.equals(realAuthCode);
-        if (result) {
-            return CommonResult.success(null, "验证码校验成功");
-        } else {
-            return CommonResult.failed("验证码不正确");
-        }
-    }
+> *Redis = bộ nhớ tạm, OTP đúng nghĩa “sống ngắn”*
 
-}
+---
+
+## ▶️ 7. Chạy project & test API
+
+### 🌐 Truy cập Swagger UI
+
+📍
 
 ```
-### 运行项目
-> 访问Swagger的API文档地址http://localhost:8080/swagger-ui.html ,对接口进行测试。
+http://localhost:8080/swagger-ui.html
+```
 
-![](../images/arch_screen_12.png)
+![Image](https://redis.io/docs/latest/images/rv/api/swagger-post-edit-body.png)
 
-## 项目源码地址
+![Image](https://static1.smartbear.co/swagger/media/images/tools/opensource/swaggerhub-swaggerui.png)
+
+👉 Test:
+
+* Lấy OTP
+* Nhập OTP
+* Xác thực
+
+---
+
+## 📦 Source code dự án
+
+🔗 GitHub:
 [https://github.com/macrozheng/mall-learning/tree/master/mall-tiny-03](https://github.com/macrozheng/mall-learning/tree/master/mall-tiny-03)
 
-## 公众号
+---
 
-![公众号图片](http://macro-oss.oss-cn-shenzhen.aliyuncs.com/mall/banner/qrcode_for_macrozheng_258.jpg)
+## 📢 公众号
+
+![Image](https://opengraph.githubassets.com/0e4358626612706b3d9867e82818afa40c744572ddb56dcd795566d96379e1ae/macrozheng/mall)
+
+![Image](https://macro-oss.oss-cn-shenzhen.aliyuncs.com/mall/banner/qrcode_for_macrozheng_258.jpg)
+
+👉 Theo dõi để:
+
+* Có lộ trình học rõ ràng
+* Hiểu Redis + Spring Boot bài bản
+* Không đi đường vòng ❌
+
+👉 Cứ nói, mình sẽ **đi cùng bạn từng bước, đúng chất Head First** 💙
