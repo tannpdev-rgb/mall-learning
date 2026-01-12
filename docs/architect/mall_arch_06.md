@@ -1,108 +1,213 @@
-学习不走弯路，[关注公众号](#公众号) 回复「学习路线」，获取mall项目专属学习路线！
-# mall整合SpringTask实现定时任务
+## 📚 Học tập không đi đường vòng
 
-> 本文主要讲解mall整合SpringTask的过程，以批量修改超时订单为例。
+👉 **[Theo dõi公众号](#公众号)** và **trả lời “学习路线”** để nhận **lộ trình học RIÊNG cho dự án mall**!
 
-## 项目使用框架介绍
+---
 
-### SpringTask
+# ⏰ Dự án mall: Tích hợp Spring Task để triển khai **tác vụ định kỳ**
 
-> SpringTask是Spring自主研发的轻量级定时任务工具，相比于Quartz更加简单方便，且不需要引入其他依赖即可使用。
+> Bài viết này sẽ **dẫn bạn từng bước** tích hợp **Spring Task** vào dự án **mall**,
+> thông qua một ví dụ **rất đời thực**:
+>
+> 👉 **Hủy đơn hàng quá hạn và hoàn lại tồn kho theo lịch định kỳ**
 
-### Cron表达式
+💡 Head First nói thẳng:
 
-> Cron表达式是一个字符串，包括6~7个时间元素，在SpringTask中可以用于指定任务的执行时间。
+> *Việc gì lặp đi lặp lại theo thời gian → giao cho Scheduler làm!* 😄
 
-#### Cron的语法格式
-Seconds Minutes Hours DayofMonth Month DayofWeek
+---
 
-#### Cron格式中每个时间元素的说明
+## 🧩 1. Giới thiệu framework sử dụng
 
-时间元素 | 可出现的字符 | 有效数值范围
-----|----|----
-Seconds | , - * / | 0-59
-Minutes | , - * / | 0-59
-Hours | , - * / | 0-23  
-DayofMonth | , - * / ? L W | 0-31
-Month | , - * / | 1-12
-DayofWeek | , - * / ? L # | 1-7或SUN-SAT
+### ⏱️ Spring Task là gì?
 
-#### Cron格式中特殊字符说明
+> **Spring Task** là công cụ **lập lịch (schedule)** nhẹ, gọn, do chính Spring cung cấp.
 
-字符 | 作用 | 举例
-----|----|----
-, | 列出枚举值 | 在Minutes域使用5,10，表示在5分和10分各触发一次
-\- | 表示触发范围 | 在Minutes域使用5-10，表示从5分到10分钟每分钟触发一次
-\* | 匹配任意值 | 在Minutes域使用*, 表示每分钟都会触发一次
-/ | 起始时间开始触发，每隔固定时间触发一次 | 在Minutes域使用5/10,表示5分时触发一次，每10分钟再触发一次
-? | 在DayofMonth和DayofWeek中，用于匹配任意值 | 在DayofMonth域使用?,表示每天都触发一次
-\# | 在DayofMonth中，确定第几个星期几 | 1#3表示第三个星期日
-L | 表示最后 | 在DayofWeek中使用5L,表示在最后一个星期四触发
-W | 表示有效工作日(周一到周五) | 在DayofMonth使用5W，如果5日是星期六，则将在最近的工作日4日触发一次
+So với Quartz:
 
-## 业务场景说明
+* ✅ Cấu hình **đơn giản hơn**
+* ✅ **Không cần thêm dependency**
+* ✅ Đủ dùng cho **đa số bài toán business**
 
-- 用户对某商品进行下单操作；
-- 系统需要根据用户购买的商品信息生成订单并锁定商品的库存；
-- 系统设置了60分钟用户不付款就会取消订单；
-- 开启一个定时任务，每隔10分钟检查下，如果有超时还未付款的订单，就取消订单并取消锁定的商品库存。
+👉 Kết luận nhanh:
 
-## 整合SpringTask
-> 由于SpringTask已经存在于Spring框架中，所以无需添加依赖。
+> *Không cần workflow phức tạp → chọn Spring Task*
 
-### 添加SpringTask的配置
+---
 
-> 只需要在配置类中添加一个@EnableScheduling注解即可开启SpringTask的定时任务能力。
+### 🧠 Cron Expression là gì?
+
+> **Cron expression** là một chuỗi ký tự dùng để **chỉ định thời điểm chạy task**.
+
+Trong Spring Task, Cron giúp bạn nói với hệ thống:
+
+> *“Hãy chạy việc này đúng lúc tao cần”* 😎
+
+---
+
+## 🧾 2. Cú pháp Cron Expression
+
+### 📐 Cấu trúc tổng quát
+
+```
+Seconds Minutes Hours DayOfMonth Month DayOfWeek
+```
+
+![Image](https://substackcdn.com/image/fetch/%24s_%21JIXk%21%2Cf_auto%2Cq_auto%3Agood%2Cfl_progressive%3Asteep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F494650c6-0993-4b60-b69f-f1cd05c464c6_1600x995.png)
+
+![Image](https://ppolyzos.com/wp-content/uploads/2020/05/cron-expressions-notes.jpg)
+
+---
+
+### 📊 Ý nghĩa từng trường trong Cron
+
+| Trường     | Ký tự cho phép | Giá trị          |
+| ---------- | -------------- | ---------------- |
+| Seconds    | , - * /        | 0–59             |
+| Minutes    | , - * /        | 0–59             |
+| Hours      | , - * /        | 0–23             |
+| DayOfMonth | , - * / ? L W  | 1–31             |
+| Month      | , - * /        | 1–12             |
+| DayOfWeek  | , - * / ? L #  | 1–7 hoặc SUN–SAT |
+
+---
+
+### ✨ Các ký tự đặc biệt trong Cron (rất hay dùng)
+
+| Ký tự | Ý nghĩa             | Ví dụ                           |
+| ----- | ------------------- | ------------------------------- |
+| `,`   | Liệt kê             | `5,10` → phút 5 & 10            |
+| `-`   | Khoảng              | `5-10` → từ phút 5 đến 10       |
+| `*`   | Bất kỳ              | `*` → mỗi phút                  |
+| `/`   | Chu kỳ              | `5/10` → từ phút 5, mỗi 10 phút |
+| `?`   | Không xác định      | dùng cho Day                    |
+| `#`   | Thứ mấy trong tháng | `1#3` → Chủ nhật thứ 3          |
+| `L`   | Cuối cùng           | `5L` → Thứ 5 cuối               |
+| `W`   | Ngày làm việc       | `5W` → ngày làm việc gần nhất   |
+
+💡 Head First nhớ:
+
+> *Cron nhìn rối, nhưng dùng quen là cực kỳ “đã”*
+
+---
+
+## 🧠 3. Bài toán nghiệp vụ (rất thực tế)
+
+Hãy tưởng tượng hệ thống bán hàng của bạn 👇
+
+1. User đặt hàng
+2. Hệ thống tạo đơn + **khóa tồn kho**
+3. Nếu **60 phút không thanh toán** → hủy đơn
+4. **Hoàn lại tồn kho**
+5. Việc kiểm tra này **phải chạy định kỳ**
+
+👉 Không thể chờ user gọi API
+👉 Không thể làm thủ công
+👉 **Scheduler sinh ra cho chuyện này**
+
+---
+
+## 🔌 4. Tích hợp Spring Task
+
+💡 Tin vui:
+
+> *Spring Task có sẵn trong Spring Boot → KHÔNG cần thêm dependency*
+
+---
+
+### ⚙️ Bước 1: Bật Spring Task
+
+> Chỉ cần **1 annotation** 🎯
 
 ```java
-package com.macro.mall.tiny.config;
-
-import org.springframework.context.annotation.Configuration;
-import org.springframework.scheduling.annotation.EnableScheduling;
-
-/**
- * 定时任务配置
- * Created by macro on 2019/4/8.
- */
 @Configuration
 @EnableScheduling
 public class SpringTaskConfig {
 }
 ```
 
-### 添加OrderTimeOutCancelTask来执行定时任务
+👉 Từ giờ, project của bạn **có khả năng chạy task định kỳ**
+
+---
+
+### 🧱 Bước 2: Tạo task xử lý đơn hàng quá hạn
+
+> Ta tạo một component chuyên làm việc này.
+
 ```java
-package com.macro.mall.tiny.component;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.scheduling.annotation.Scheduled;
-import org.springframework.stereotype.Component;
-
-/**
- * Created by macro on 2018/8/24.
- * 订单超时取消并解锁库存的定时器
- */
 @Component
 public class OrderTimeOutCancelTask {
     private Logger LOGGER = LoggerFactory.getLogger(OrderTimeOutCancelTask.class);
 
     /**
-     * cron表达式：Seconds Minutes Hours DayofMonth Month DayofWeek [Year]
-     * 每10分钟扫描一次，扫描设定超时时间之前下的订单，如果没支付则取消该订单
+     * Cron: mỗi 10 phút chạy 1 lần
+     * Quét các đơn quá hạn chưa thanh toán → hủy + hoàn kho
      */
     @Scheduled(cron = "0 0/10 * ? * ?")
     private void cancelTimeOutOrder() {
-        // TODO: 2019/5/3 此处应调用取消订单的方法，具体查看mall项目源码
-        LOGGER.info("取消订单，并根据sku编号释放锁定库存");
+        // TODO: gọi service hủy đơn & hoàn kho
+        LOGGER.info("Hủy đơn quá hạn và giải phóng tồn kho");
     }
 }
-
 ```
 
-## 项目源码地址
+![Image](https://www.callicoder.com/static/f8fdf1db471f36281a695fe939878ed9/3c051/spring-boot-task-scheduler-example-directory-structure.png)
+
+![Image](https://javatechonline.com/wp-content/uploads/2023/01/CronExpression-2.jpg)
+
+---
+
+### 🧠 Phân tích Cron trong ví dụ
+
+```
+0 0/10 * ? * ?
+```
+
+| Phần   | Ý nghĩa             |
+| ------ | ------------------- |
+| `0`    | giây = 0            |
+| `0/10` | mỗi 10 phút         |
+| `*`    | mọi giờ             |
+| `?`    | không quan tâm ngày |
+| `*`    | mọi tháng           |
+| `?`    | không quan tâm thứ  |
+
+👉 Kết luận:
+
+> **Cứ mỗi 10 phút → chạy task**
+
+---
+
+## 💡 Head First – Những điều cần nhớ
+
+* Spring Task **rất hợp cho job đơn giản**
+* Cron là **linh hồn của Scheduler**
+* Task nên:
+
+  * Nhẹ
+  * Nhanh
+  * Idempotent (chạy lại không lỗi)
+
+👉 Job nặng → tách service
+👉 Job phức tạp → cân nhắc Quartz / Message Queue
+
+---
+
+## 📦 Source code dự án
+
+🔗 GitHub:
 [https://github.com/macrozheng/mall-learning/tree/master/mall-tiny-05](https://github.com/macrozheng/mall-learning/tree/master/mall-tiny-05)
 
-## 公众号
+---
 
-![公众号图片](http://macro-oss.oss-cn-shenzhen.aliyuncs.com/mall/banner/qrcode_for_macrozheng_258.jpg)
+## 📢 公众号
+
+![Image](https://opengraph.githubassets.com/0e4358626612706b3d9867e82818afa40c744572ddb56dcd795566d96379e1ae/macrozheng/mall)
+
+![Image](https://macro-oss.oss-cn-shenzhen.aliyuncs.com/mall/banner/qrcode_for_macrozheng_258.jpg)
+
+👉 Theo dõi để:
+
+* Hiểu Scheduler trong dự án thực tế
+* Kết hợp **Spring Task + Business**
+* Không đi đường vòng ❌
