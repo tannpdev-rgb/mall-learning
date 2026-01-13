@@ -82,7 +82,7 @@ Nếu bạn thấy **một số công nghệ còn mơ hồ**, hãy dùng danh s�
 ### 🗄️ MyBatis (làm việc với Database)
 
 📘 **MyBatis 从入门到精通**
-👉 [https://book.douban.com/subject/27074809/](https://book.douban.com/subject/27074809/)
+👉 [https://github.com/mybatis-book/book](https://github.com/mybatis-book/book)
 
 **Vì sao nên học MyBatis trước mall?**
 
