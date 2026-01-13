@@ -1,76 +1,192 @@
-学习不走弯路，[关注公众号](#公众号) 回复「学习路线」，获取mall项目专属学习路线！
+# 🧭 Mall – Tổng quan kiến trúc & chức năng
 
-# mall架构及功能概览
+> Trước khi đọc code, **hãy nhìn bản đồ**.
+> Phần này giúp bạn hiểu: **mall là gì – gồm những gì – tại sao nó được thiết kế như vậy**.
 
-> mall架构、功能及数据库结构概览
+---
 
-## mall项目简介
+## 🏬 Mall là dự án gì?
 
-mall项目是一套电商系统，包括前台商城系统及后台管理系统，基于SpringBoot+MyBatis实现。 前台商城系统包含首页门户、商品推荐、商品搜索、商品展示、购物车、订单流程、会员中心、客户服务、帮助中心等模块。 后台管理系统包含商品管理、订单管理、会员管理、促销管理、运营管理、内容管理、统计报表、财务管理、权限管理、设置等模块。
+**mall** là một **hệ thống thương mại điện tử hoàn chỉnh**, gồm **2 phần lớn**:
 
-## 项目演示
+### 🛒 1. Hệ thống FRONTEND (dành cho người dùng)
 
-- 后台项目演示：[http://www.macrozheng.com/admin/index.html](http://www.macrozheng.com/admin/index.html)
-- 移动端项目演示：[http://www.macrozheng.com/app/index.html](http://www.macrozheng.com/app/index.html)
+Đây là phần **khách hàng sử dụng hằng ngày**, bao gồm:
 
-## mall中使用的技术
+* Trang chủ
+* Gợi ý sản phẩm
+* Tìm kiếm sản phẩm
+* Xem chi tiết sản phẩm
+* Giỏ hàng
+* Quy trình đặt hàng
+* Trung tâm thành viên
+* Chăm sóc khách hàng
+* Trung tâm trợ giúp
 
-> mall采用现阶主流技术实现，涵盖了一般项目中几乎所有使用的技术。
+👉 Nói đơn giản:
 
-技术 | 版本 | 说明
-----|----|----
-Spring Boot | 2.3.0 | 容器+MVC框架
-Spring Security | 5.1.4 | 认证和授权框架
-MyBatis | 3.4.6 | ORM框架  
-MyBatisGenerator | 1.3.3 | 数据层代码生成
-PageHelper | 5.1.8 | MyBatis物理分页插件
-Swagger-UI | 2.9.2 | 文档生产工具
-Elasticsearch | 7.6.2 | 搜索引擎
-RabbitMq |3.7.14 | 消息队列
-Redis | 5.0 | 分布式缓存
-MongoDb | 4.2.5 | NoSql数据库
-Docker | 18.09.0 | 应用容器引擎
-Druid | 1.1.10 | 数据库连接池
-OSS | 2.5.0 | 对象存储
-JWT | 0.9.0 | JWT登录支持
-Lombok | 1.18.6 | 简化对象封装工具
+> **Tất cả những gì bạn thấy khi mua hàng online**.
 
-## mall实现的功能概览
+---
 
-> 具体可以看下演示地址，亲自体验下：[http://www.macrozheng.com/admin/index.html](http://www.macrozheng.com/admin/index.html)
+### 🧑‍💼 2. Hệ thống BACKEND ADMIN (dành cho quản trị)
 
-- 商品模块
-  - 商品管理
-  - 商品分类管理
-  - 商品类型管理
-  - 品牌管理
-- 订单模块
-  - 订单管理
-  - 订单设置
-  - 退货申请处理
-  - 退货原因设置
-- 营销模块
-  - 秒杀活动管理
-  - 优惠价管理
-  - 品牌推荐管理
-  - 新品推荐管理
-  - 人气推荐管理
-  - 专题推荐管理
-  - 首页广告管理
+Đây là **hệ thống quản lý phía sau**, bao gồm:
 
-## mall数据库表概览
-> mall项目目前有71张数据表，业务逻辑有一定复杂度，平时做项目参考也够了。
+* Quản lý sản phẩm
+* Quản lý đơn hàng
+* Quản lý thành viên
+* Quản lý khuyến mãi
+* Quản lý vận hành
+* Quản lý nội dung
+* Thống kê – báo cáo
+* Quản lý tài chính
+* Phân quyền & bảo mật
+* Cấu hình hệ thống
 
-![mall数据库表展示](../images/mall_mysql_all.png)
+👉 Đây chính là **phần bạn – một Java Backend Developer – sẽ làm việc nhiều nhất**.
 
-### 数据库表前缀说明
+---
 
-- cms_*：内容管理模块相关表
-- oms_*：订单管理模块相关表
-- pms_*：商品模块相关表
-- sms_*：营销模块相关表
-- ums_*：会员模块相关表
+## ▶️ Demo hệ thống (rất nên xem)
 
-## 公众号
+> Xem demo giúp bạn **hiểu chức năng trước khi đọc code**.
 
-![公众号图片](http://macro-oss.oss-cn-shenzhen.aliyuncs.com/mall/banner/qrcode_for_macrozheng_258.jpg)
+* 🔧 Backend Admin:
+  [http://www.macrozheng.com/admin/index.html](http://www.macrozheng.com/admin/index.html)
+
+* 📱 Frontend (Mobile):
+  [http://www.macrozheng.com/app/index.html](http://www.macrozheng.com/app/index.html)
+
+👉 Khuyên thật:
+
+> **Mở demo – bấm thử vài chức năng – rồi quay lại học**.
+> Bạn sẽ hiểu code nhanh hơn rất nhiều.
+
+---
+
+## 🧰 Công nghệ được sử dụng trong mall
+
+> mall **không phải demo nhỏ**, mà là **stack công nghệ chuẩn doanh nghiệp**.
+
+| Công nghệ         | Phiên bản | Dùng để làm gì          |
+| ----------------- | --------- | ----------------------- |
+| Spring Boot       | 2.3.0     | Khung xương backend     |
+| Spring Security   | 5.1.4     | Đăng nhập & phân quyền  |
+| MyBatis           | 3.4.6     | ORM – thao tác DB       |
+| MyBatis Generator | 1.3.3     | Sinh code DAO           |
+| PageHelper        | 5.1.8     | Phân trang              |
+| Swagger-UI        | 2.9.2     | Tài liệu API            |
+| Elasticsearch     | 7.6.2     | Tìm kiếm sản phẩm       |
+| RabbitMQ          | 3.7.14    | Message Queue           |
+| Redis             | 5.0       | Cache                   |
+| MongoDB           | 4.2.5     | NoSQL                   |
+| Docker            | 18.09.0   | Container hóa           |
+| Druid             | 1.1.10    | Connection Pool         |
+| OSS               | 2.5.0     | Lưu file                |
+| JWT               | 0.9.0     | Token đăng nhập         |
+| Lombok            | 1.18.6    | Giảm code getter/setter |
+
+👉 Nhận xét thẳng:
+
+> **Học xong mall = bạn đã chạm gần hết tech stack backend Java hiện đại**.
+
+---
+
+## 🧩 Các chức năng chính của mall
+
+> Nếu bạn thấy nhiều → đúng rồi, vì **hệ thống thật nó phải như vậy**.
+
+### 🛍️ Module Sản phẩm (PMS)
+
+* Quản lý sản phẩm
+* Quản lý danh mục
+* Quản lý loại sản phẩm
+* Quản lý thương hiệu
+
+---
+
+### 📦 Module Đơn hàng (OMS)
+
+* Quản lý đơn hàng
+* Cấu hình đơn hàng
+* Xử lý yêu cầu trả hàng
+* Thiết lập lý do trả hàng
+
+---
+
+### 🎯 Module Marketing (SMS)
+
+* Quản lý flash sale
+* Quản lý giá ưu đãi
+* Gợi ý thương hiệu
+* Gợi ý sản phẩm mới
+* Gợi ý sản phẩm hot
+* Quản lý chuyên đề
+* Quản lý banner trang chủ
+
+👉 Đây là nơi **nghiệp vụ phức tạp nhất**.
+
+---
+
+## 🗄️ Tổng quan Database của mall
+
+> mall **KHÔNG đơn giản** – hiện tại có **71 bảng dữ liệu**.
+
+![Image](https://www.tutorials24x7.com/sites/default/files/uploads/2020-04-27/files/tutorials24x7-mysql-online-shopping-cart-database-design.png)
+
+![Image](https://databasesample.com/_next/image?q=75\&url=%2Fdatabase%2Fshopping-mall-database.png\&w=3840)
+
+👉 Điều này có nghĩa là:
+
+* Có quan hệ phức tạp
+* Có nhiều bảng trung gian
+* Rất sát với hệ thống thật
+
+---
+
+### 📌 Quy ước tiền tố bảng
+
+Để **nhìn tên bảng là biết thuộc module nào**:
+
+* `cms_*` → Content (nội dung)
+* `oms_*` → Order (đơn hàng)
+* `pms_*` → Product (sản phẩm)
+* `sms_*` → Sale / Marketing
+* `ums_*` → User / Member
+
+👉 Đây là **best practice rất nên học theo**.
+
+---
+
+## 🎯 Bạn nên học phần này như thế nào?
+
+💡 Gợi ý:
+
+1️⃣ Xem **demo hệ thống**
+2️⃣ Đọc **tổng quan kiến trúc (bài này)**
+3️⃣ Nhớ:
+
+* Có **2 hệ thống**
+* Có **nhiều module**
+* DB **rất lớn**
+
+👉 Sau đó **mới bắt đầu đọc từng module**.
+
+---
+
+## 📢 公众号 (WeChat Official Account)
+
+Học không đi đường vòng, theo dõi公众号 **macrozheng**
+👉 Trả lời **「学习路线」** để nhận **lộ trình học mall chi tiết**
+
+![Image](https://opengraph.githubassets.com/0e4358626612706b3d9867e82818afa40c744572ddb56dcd795566d96379e1ae/macrozheng/mall)
+
+![Image](https://macro-oss.oss-cn-shenzhen.aliyuncs.com/mall/banner/qrcode_for_macrozheng_258.jpg)
+
+---
+
+## ✅ Kết luận (rất quan trọng)
+
+> mall **không phải project để copy code**
+> mall là **bản đồ giúp bạn hiểu cách xây dựng một hệ thống lớn**
