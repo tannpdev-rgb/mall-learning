@@ -1,97 +1,289 @@
-学习不走弯路，[关注公众号](#公众号) 回复「学习路线」，获取mall项目专属学习路线！
+Học tập **không đi đường vòng** 🧭
+👉 [Theo dõi公众号](#公众号) và **trả lời “学习路线”** để nhận **lộ trình học riêng cho dự án mall**!
 
-# mall在Linux环境下的自动化部署（基于Jenkins）
+---
 
-> 本文是`mall`项目的专属Jenkins自动化部署方法。
+# Triển khai tự động mall trên Linux (dựa trên Jenkins)
 
-## Jenkins的基本使用
+> Bài viết này trình bày **cách mall triển khai tự động bằng Jenkins**,
+> áp dụng cho **dự án Spring Boot đa module**,
+> theo phong pháp **CI/CD thực tế trong doanh nghiệp**.
 
-关于Jenkins的基本使用可以参考：[使用Jenkins一键打包部署SpringBoot应用，就是这么6！](https://mp.weixin.qq.com/s/tQqvgSc9cHBtnqRQSbI4aw)
+🧠 **Head First mindset**
+Jenkins **không phải** chỉ để “build cho vui” ❌
+Jenkins là **robot thay bạn deploy** ✅
 
-## 执行脚本准备
+---
 
-> 首先我们先把需要远程执行的脚本准备好。
+## Bức tranh tổng thể: Jenkins đang làm việc gì?
 
-- 脚本文件都存放在了`mall`项目的`/document/sh`目录下：
+Hãy tưởng tượng luồng sau 👇
 
-- 上传脚本前在IDEA中修改所有脚本文件的换行符格式为`LF`，否则脚本会无法执行；
+```
+Dev push code
+     ↓
+Jenkins pull code
+     ↓
+Build dependency modules
+     ↓
+Build service module
+     ↓
+SSH sang server
+     ↓
+Stop container cũ
+     ↓
+Run container mới
+```
+
+👉 Mỗi bước = **1 việc cụ thể**
+👉 Jenkins chỉ làm đúng những gì bạn dạy nó
+
+---
+
+## 1️⃣ Jenkins – kiến thức nền
+
+> Phần kiến thức cơ bản về Jenkins có thể xem tại:
+> [使用Jenkins一键打包部署SpringBoot应用，就是这么6！]
+
+🧠 Ở đây **KHÔNG lặp lại kiến thức nhập môn**,
+chỉ tập trung vào **cách áp dụng Jenkins cho mall**.
+
+---
+
+## 2️⃣ Chuẩn bị script triển khai (rất quan trọng)
+
+> Jenkins **không tự deploy được** nếu không có script.
+
+---
+
+### 📁 Thư mục script
+
+* Toàn bộ script nằm trong:
+
+```text
+mall/document/sh
+```
+
+👉 Mỗi service có **1 script riêng**:
+
+* `mall-admin.sh`
+* `mall-portal.sh`
+* `mall-search.sh`
+
+🧠 **Tư duy chuẩn**:
+
+> “Jenkins gọi script, script làm việc thật”
+
+---
+
+### ⚠️ Lỗi rất hay gặp: sai format dòng
+
+Trước khi upload script:
+
+👉 **BẮT BUỘC đổi line separator sang `LF`**
+
+Nếu không:
+
+* Jenkins SSH sang Linux
+* Script **chạy không được**
+* Lỗi rất khó hiểu 😵
 
 ![](../images/mall_deploy_jenkins_01.png)
 
-- 将所有脚本文件上传到指定目录，这里我们上传到`/mydata/sh`目录下；
+---
+
+### Upload script lên server
+
+* Upload toàn bộ script lên:
+
+```text
+/mydata/sh
+```
 
 ![](../images/mall_deploy_jenkins_02.png)
 
-- 将所有脚本文件都修改为可执行文件:
+---
+
+### Cấp quyền thực thi
 
 ```bash
 chmod +x ./mall-*
 ```
 
+🧠 Linux không có quyền execute → **script = file thường**
+
 ![](../images/mall_deploy_jenkins_03.png)
 
-## Jenkins中创建任务
+---
 
-> 接下来我们将通过在Jenkins中创建任务来实现自动化部署。由于我们的`mall`是个多模块的项目，部署上面和曾经的单模块项目还是有所区别的。
+## 3️⃣ Tạo Jenkins Job cho mall (multi-module)
 
-### mall-admin
+> Vì `mall` là **dự án đa module**,
+> nên **KHÔNG thể build 1 module đơn lẻ ngay**.
 
-> 由于各个模块的执行任务的创建都大同小异，下面将详细讲解mall-admin模块任务的创建，其他模块将简略讲解。
+🧠 **Nguyên tắc sống còn**:
 
-- 首先我们选择`构建一个自由风格的软件项目`mall-admin，然后配置其Git仓库地址，这里我直接使用了Gitee上面的地址：
+> 👉 **Build dependency trước, service sau**
+
+---
+
+## 4️⃣ Tạo job cho `mall-admin` (giải thích chi tiết)
+
+### Bước 1: Tạo job
+
+* Chọn:
+
+```text
+构建一个自由风格的软件项目
+```
+
+* Đặt tên: `mall-admin`
+* Cấu hình Git repository
 
 ![](../images/mall_deploy_jenkins_04.png)
 
-- 之后我们创建一个构建，构建`mall`项目中的依赖模块，否则当构建可运行的服务模块时会因为无法找到这些模块而构建失败；
+---
+
+### Bước 2: Build các module phụ thuộc
 
 ```bash
-# 只install mall-common,mall-mbg,mall-security三个模块
 clean install -pl mall-common,mall-mbg,mall-security -am
 ```
 
-- 依赖项目构建示意图：
+🧠 **Head First giải thích câu lệnh này**:
+
+| Tham số         | Ý nghĩa                       |
+| --------------- | ----------------------------- |
+| `-pl`           | chỉ build module chỉ định     |
+| `-am`           | build cả dependency của chúng |
+| `clean install` | build & cài vào local repo    |
+
+👉 Nếu **bỏ bước này** →
+`mall-admin` sẽ **build FAIL**
 
 ![](../images/mall_deploy_jenkins_05.png)
 
-- 再创建一个构建，单独构建并打包mall-admin模块：
+---
+
+### Bước 3: Build riêng module mall-admin
+
+* Chỉ định đúng `pom.xml` của mall-admin
 
 ![](../images/mall_deploy_jenkins_06.png)
 
-- 添加一个远程SSH执行任务，去执行mall-admin的运行脚本：
+🧠 **Tư duy chuẩn**:
+
+> “Dependency build 1 lần – service build riêng”
+
+---
+
+### Bước 4: SSH sang server để deploy
+
+* Thêm **SSH Execute task**
+* Chạy script:
+
+```text
+/mydata/sh/mall-admin.sh
+```
 
 ![](../images/mall_deploy_jenkins_07.png)
 
-- 点击保存，完成mall-admin的执行任务创建。
+🧠 Script này thường làm:
 
-### mall-portal
+1. Stop container cũ
+2. Xóa container cũ
+3. Run container mới
 
-> mall-portal和其他模块与mall-admin创建任务方式基本一致，只需修改构建模块时的pom.xml文件位置和执行脚本位置即可。
+---
 
-- 我们可以直接从mall-admin模块的任务复制一个过来创建：
+### Bước 5: Lưu job
+
+👉 `mall-admin` job hoàn tất 🎉
+
+---
+
+## 5️⃣ Tạo job cho `mall-portal`
+
+> `mall-portal` **giống 90% mall-admin**
+
+🧠 **Đừng làm lại từ đầu** – hãy copy job.
+
+---
+
+### Copy từ mall-admin
 
 ![](../images/mall_deploy_jenkins_08.png)
 
-- 修改第二个构建中的pom.xml文件位置，改为：${WORKSPACE}/mall-portal/pom.xml
+---
+
+### Sửa pom.xml
+
+```text
+${WORKSPACE}/mall-portal/pom.xml
+```
 
 ![](../images/mall_deploy_jenkins_09.png)
 
-- 修改第三个构建中的SSH执行脚本文件位置，改为：/mydata/sh/mall-portal.sh
+---
+
+### Sửa script SSH
+
+```text
+/mydata/sh/mall-portal.sh
+```
 
 ![](../images/mall_deploy_jenkins_10.png)
 
-- 点击保存，完成mall-portal的执行任务创建。
+---
 
-### mall-search
+### Lưu job
 
-参考mall-admin和mall-portal的创建即可。
+👉 `mall-portal` xong ✅
 
-### 任务创建完成
+---
+
+## 6️⃣ mall-search
+
+👉 Làm **y hệt mall-admin & mall-portal**
+👉 Chỉ khác:
+
+* pom.xml
+* script deploy
+
+---
+
+## 7️⃣ Hoàn tất các job Jenkins
 
 ![](../images/mall_deploy_jenkins_11.png)
 
-## 项目地址
+🧠 **Tại thời điểm này**:
 
-[https://github.com/macrozheng/mall](https://github.com/macrozheng/mall)
+* Push code
+* Bấm Build
+* Jenkins tự deploy
+
+👉 **Không SSH tay**
+👉 **Không gõ docker run thủ công**
+
+---
+
+## 8️⃣ Vì sao cách này “chuẩn doanh nghiệp”?
+
+🧠 Head First tổng kết:
+
+1️⃣ Multi-module → build có thứ tự
+2️⃣ Script tách riêng → dễ sửa, dễ debug
+3️⃣ Jenkins chỉ orchestration → không ôm logic
+4️⃣ SSH deploy → phù hợp server on-premise
+5️⃣ Copy job → tiết kiệm 70% thời gian
+
+---
+
+## 9️⃣ Dự án tham khảo
+
+🔗 [https://github.com/macrozheng/mall](https://github.com/macrozheng/mall)
+
+---
 
 ## 公众号
 
