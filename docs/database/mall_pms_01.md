@@ -11,12 +11,10 @@ Học tập **không đi đường vòng** 🧭
 > * Quản lý thương hiệu
 > * Loại sản phẩm (thuộc tính sản phẩm)
 >
-> Cách trình bày sẽ theo kiểu:
-> 👉 **chức năng ↔ cấu trúc bảng dữ liệu**
+> Cách trình bày:
+> 👉 **chức năng ↔ bảng dữ liệu ↔ ví dụ thực tế**
 >
-> ⚠️ Lưu ý:
-> Chỉ những **trường quan trọng cần hiểu** mới được giải thích.
-> Các trường đơn giản, bạn hãy **tự đối chiếu với comment trong bảng**.
+> ⚠️ Chỉ giải thích **trường quan trọng**, các trường đơn giản tự đọc comment SQL.
 
 ---
 
@@ -33,8 +31,8 @@ create table pms_product_category
    level                int(1) comment 'Cấp danh mục: 0->cấp 1; 1->cấp 2',
    product_count        int comment 'Số lượng sản phẩm',
    product_unit         varchar(64) comment 'Đơn vị sản phẩm',
-   nav_status           int(1) comment 'Hiển thị trên thanh điều hướng: 0->không; 1->có',
-   show_status          int(1) comment 'Trạng thái hiển thị: 0->ẩn; 1->hiện',
+   nav_status           int(1) comment 'Hiển thị trên thanh điều hướng',
+   show_status          int(1) comment 'Trạng thái hiển thị',
    sort                 int comment 'Thứ tự sắp xếp',
    icon                 varchar(255) comment 'Icon',
    keywords             varchar(255) comment 'Từ khóa',
@@ -43,12 +41,27 @@ create table pms_product_category
 );
 ```
 
-🧠 **Tư duy Head First**:
-Hãy hình dung đây là **một cây danh mục** 🌳
+### 🧠 Tư duy Head First (kèm ví dụ)
 
-* `parent_id = 0` → danh mục gốc
-* Các danh mục con trỏ ngược về danh mục cha
-* `level` giúp frontend biết đang ở tầng nào
+Hãy tưởng tượng bạn đang xây **một trung tâm thương mại online** 🏬
+
+#### Ví dụ dữ liệu thật
+
+| id | parent_id | name                 | level |
+| -- | --------- | -------------------- | ----- |
+| 1  | 0         | Điện thoại           | 0     |
+| 2  | 1         | Smartphone           | 1     |
+| 3  | 1         | Điện thoại phổ thông | 1     |
+| 4  | 0         | Laptop               | 0     |
+| 5  | 4         | Laptop gaming        | 1     |
+
+👉 Điều này có nghĩa là:
+
+* `parent_id = 0` → danh mục **gốc**
+* `level = 0` → menu chính
+* `level = 1` → submenu
+
+📱 **Mobile / Web sẽ dùng bảng này để vẽ menu dạng cây**.
 
 ---
 
@@ -66,7 +79,8 @@ Hãy hình dung đây là **một cây danh mục** 🌳
 
 ![](../images/database_screen_03.png)
 
-👉 Cùng một bảng, nhưng **UI khác nhau** tùy nền tảng.
+👉 **Một bảng – nhiều cách hiển thị**
+DB không đổi, chỉ khác **frontend**.
 
 ---
 
@@ -81,21 +95,38 @@ create table pms_brand
    name                 varchar(64) comment 'Tên thương hiệu',
    first_letter         varchar(8) comment 'Chữ cái đầu',
    sort                 int comment 'Thứ tự sắp xếp',
-   factory_status       int(1) comment 'Có phải nhà sản xuất không: 0->không; 1->có',
+   factory_status       int(1) comment 'Có phải nhà sản xuất không',
    show_status          int(1) comment 'Có hiển thị không',
    product_count        int comment 'Số lượng sản phẩm',
-   product_comment_count int comment 'Số lượng bình luận sản phẩm',
-   logo                 varchar(255) comment 'Logo thương hiệu',
-   big_pic              varchar(255) comment 'Ảnh lớn khu vực thương hiệu',
+   product_comment_count int comment 'Số lượng bình luận',
+   logo                 varchar(255) comment 'Logo',
+   big_pic              varchar(255) comment 'Ảnh banner',
    brand_story          text comment 'Câu chuyện thương hiệu',
    primary key (id)
 );
 ```
 
-🧠 **Hiểu nhanh**:
+### 🧠 Head First: hãy nghĩ như người dùng
 
-* `factory_status` → dùng để phân biệt **hãng sản xuất** và **nhãn hiệu phân phối**
-* `first_letter` → dùng cho **sắp xếp A–Z** trên mobile
+#### Ví dụ dữ liệu
+
+| id | name    | first_letter | factory_status |
+| -- | ------- | ------------ | -------------- |
+| 1  | Apple   | A            | 1              |
+| 2  | Samsung | S            | 1              |
+| 3  | Baseus  | B            | 0              |
+
+👉 Ý nghĩa:
+
+* `factory_status = 1`
+  → **hãng sản xuất gốc** (Apple, Samsung)
+* `factory_status = 0`
+  → **hãng phụ kiện / phân phối**
+
+📱 Mobile dùng `first_letter` để:
+
+* Hiển thị **A–Z**
+* Scroll nhanh theo chữ cái
 
 ---
 
@@ -117,18 +148,39 @@ create table pms_brand
 
 ## 3️⃣ Loại sản phẩm (Thuộc tính sản phẩm)
 
-> **Loại sản phẩm = thuộc tính sản phẩm**
+> **Loại sản phẩm = Thuộc tính sản phẩm**
 >
-> Gồm 2 nhóm chính:
->
-> * **规格 (Specification – Quy cách)** → người dùng chọn khi mua (màu, size…)
-> * **参数 (Parameter – Tham số)** → mô tả sản phẩm, dùng để lọc & tìm kiếm
+> Gồm **2 loại khác nhau nhưng rất hay bị nhầm** 👇
 
 ---
 
-### Cấu trúc bảng liên quan
+### 🔹 规格 (Specification – Quy cách)
 
-#### Bảng phân loại thuộc tính sản phẩm
+👉 **Người dùng phải chọn khi mua**
+👉 Dùng để **tạo SKU**
+
+**Ví dụ:**
+
+* Màu sắc
+* Dung lượng
+* Size
+
+---
+
+### 🔹 参数 (Parameter – Tham số)
+
+👉 **Chỉ để xem & lọc**
+👉 Không tạo SKU
+
+**Ví dụ:**
+
+* CPU
+* RAM
+* Hệ điều hành
+
+---
+
+### Bảng phân loại thuộc tính
 
 ```sql
 create table pms_product_attribute_category
@@ -141,77 +193,136 @@ create table pms_product_attribute_category
 );
 ```
 
-👉 Dùng để **gom nhóm thuộc tính** (ví dụ: Điện thoại, Laptop…)
+### 🧠 Ví dụ
+
+| id | name       |
+| -- | ---------- |
+| 1  | Điện thoại |
+| 2  | Laptop     |
+
+👉 Mỗi nhóm sẽ có **bộ thuộc tính riêng**
 
 ---
 
-#### Bảng thuộc tính sản phẩm
-
-> Trường `type` quyết định đây là **quy cách** hay **tham số**
+### Bảng thuộc tính sản phẩm
 
 ```sql
 create table pms_product_attribute
 (
    id                   bigint not null auto_increment,
-   product_attribute_category_id bigint comment 'ID nhóm thuộc tính',
-   name                 varchar(64) comment 'Tên thuộc tính',
-   select_type          int(1) comment 'Cách chọn: 0->duy nhất; 1->đơn chọn; 2->đa chọn',
-   input_type           int(1) comment 'Cách nhập: 0->nhập tay; 1->chọn từ danh sách',
-   input_list           varchar(255) comment 'Danh sách giá trị, cách nhau bằng dấu phẩy',
-   sort                 int comment 'Thứ tự (cao nhất có thể upload ảnh)',
-   filter_type          int(1) comment 'Kiểu lọc: 0->thường; 1->màu sắc',
-   search_type          int(1) comment 'Kiểu tìm kiếm: 0->không; 1->keyword; 2->range',
-   related_status       int(1) comment 'Sản phẩm cùng thuộc tính có liên kết không',
-   hand_add_status      int(1) comment 'Có cho thêm thủ công không',
-   type                 int(1) comment '0->quy cách; 1->tham số',
+   product_attribute_category_id bigint,
+   name                 varchar(64),
+   select_type          int(1),
+   input_type           int(1),
+   input_list           varchar(255),
+   sort                 int,
+   filter_type          int(1),
+   search_type          int(1),
+   related_status       int(1),
+   hand_add_status      int(1),
+   type                 int(1),
    primary key (id)
 );
 ```
 
-🧠 **Cách nhớ nhanh**:
+### 🧠 Ví dụ cực kỳ quan trọng (đọc chậm)
 
-* **规格 (type=0)** → tạo **SKU**
-* **参数 (type=1)** → hiển thị & lọc
+#### Ví dụ 1: Màu sắc (Specification)
+
+| field       | value          |
+| ----------- | -------------- |
+| name        | Màu sắc        |
+| type        | 0 (规格)         |
+| select_type | 1 (đơn chọn)   |
+| input_list  | Đen,Trắng,Xanh |
+
+👉 Khi người dùng mua:
+
+* Phải chọn **1 màu**
+* Mỗi màu → **SKU khác nhau**
 
 ---
 
-#### Bảng giá trị thuộc tính sản phẩm
+#### Ví dụ 2: RAM (Specification)
 
-> Tùy từng trường hợp mà bảng này lưu:
->
-> * Giá trị **quy cách thêm thủ công**
-> * Hoặc **giá trị tham số**
+| field       | value    |
+| ----------- | -------- |
+| name        | RAM      |
+| type        | 0        |
+| select_type | 1        |
+| input_list  | 8GB,16GB |
+
+👉 Kết hợp với màu → tạo **nhiều SKU**
+
+---
+
+#### Ví dụ 3: CPU (Parameter)
+
+| field       | value       |
+| ----------- | ----------- |
+| name        | CPU         |
+| type        | 1 (参数)      |
+| search_type | 1 (keyword) |
+
+👉 Chỉ để:
+
+* Hiển thị chi tiết
+* Lọc khi tìm kiếm
+
+---
+
+### Bảng giá trị thuộc tính
 
 ```sql
 create table pms_product_attribute_value
 (
    id                   bigint not null auto_increment,
-   product_id           bigint comment 'ID sản phẩm',
-   product_attribute_id bigint comment 'ID thuộc tính',
-   value                varchar(64) comment 'Giá trị (quy cách nhiều giá trị cách nhau bằng dấu phẩy)',
+   product_id           bigint,
+   product_attribute_id bigint,
+   value                varchar(64),
    primary key (id)
 );
 ```
 
+### 🧠 Ví dụ
+
+Sản phẩm: **iPhone 15**
+
+| product_id | attribute | value |
+| ---------- | --------- | ----- |
+| 101        | CPU       | A17   |
+| 101        | RAM       | 8GB   |
+| 101        | Màu       | Đen   |
+
+👉 Bảng này giống như:
+
+> **“Bảng ghi chú thuộc tính của từng sản phẩm”**
+
 ---
 
-#### Bảng quan hệ giữa danh mục và thuộc tính
-
-> Dùng để **tạo bộ lọc khi tìm kiếm theo danh mục**
+### Bảng quan hệ danh mục – thuộc tính
 
 ```sql
 create table pms_product_category_attribute_relation
 (
    id                   bigint not null auto_increment,
-   product_category_id  bigint comment 'ID danh mục',
-   product_attribute_id bigint comment 'ID thuộc tính',
+   product_category_id  bigint,
+   product_attribute_id bigint,
    primary key (id)
 );
 ```
 
-👉 Đây chính là thứ giúp:
+### 🧠 Ví dụ
 
-> “Chọn danh mục → hiện bộ lọc phù hợp”
+| category   | attribute   |
+| ---------- | ----------- |
+| Điện thoại | RAM         |
+| Điện thoại | CPU         |
+| Laptop     | Card đồ họa |
+
+👉 Khi người dùng:
+
+> **Chọn danh mục → hệ thống biết phải hiện bộ lọc nào**
 
 ---
 
@@ -232,23 +343,23 @@ create table pms_product_category_attribute_relation
 * Thêm thuộc tính
   ![](../images/database_screen_11.png)
 
-* Khi thêm sản phẩm, chọn nhóm thuộc tính → hiển thị quy cách để tạo SKU
+* Sinh SKU khi chọn thuộc tính
   ![](../images/database_screen_12.png)
 
-* Khi thêm sản phẩm, hiển thị tham số để nhập
+* Nhập tham số sản phẩm
   ![](../images/database_screen_13.png)
 
 ---
 
 ### Hiển thị trên mobile
 
-* Chọn quy cách sản phẩm
+* Chọn quy cách
   ![](../images/database_screen_14.png)
 
-* Xem tham số sản phẩm
+* Xem tham số
   ![](../images/database_screen_15.png)
 
-* Lọc sản phẩm khi tìm kiếm theo danh mục
+* Lọc khi tìm kiếm
   ![](../images/database_screen_16.png)
 
 ---
