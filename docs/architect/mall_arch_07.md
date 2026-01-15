@@ -1,140 +1,141 @@
-## 📚 Học tập không đi đường vòng
-
-👉 **[Theo dõi公众号](#公众号)** và **trả lời “学习路线”** để nhận **lộ trình học RIÊNG cho dự án mall**!
-
----
-
-# 🔍 Dự án mall: Tích hợp Elasticsearch để tìm kiếm sản phẩm
-
-> Bài viết này sẽ **dẫn bạn từng bước** tích hợp **Elasticsearch vào dự án mall**,
-> nhằm thực hiện các chức năng:
->
-> * Import dữ liệu sản phẩm vào Elasticsearch
-> * Tìm kiếm sản phẩm (full-text search)
-> * Thêm / sửa / xóa dữ liệu trong Elasticsearch
-
-💡 Head First nói thẳng:
-
-> *Database để lưu – Elasticsearch để tìm!*
+Học tập **không đi đường vòng** 🚀
+👉 [Theo dõi公众号](#公众号) và **trả lời “学习路线”** để nhận **lộ trình học riêng cho dự án mall**!
 
 ---
 
-## 🧩 1. Elasticsearch là gì?
+# mall tích hợp Elasticsearch để thực hiện tìm kiếm sản phẩm
 
-> **Elasticsearch** là một **công cụ tìm kiếm & phân tích dữ liệu phân tán**,
-> có khả năng:
->
-> * Tìm kiếm **toàn văn (full-text search)**
-> * Truy vấn cực nhanh
-> * Phân tích dữ liệu theo thời gian thực
+> Bài viết này sẽ dẫn bạn từng bước **tích hợp Elasticsearch vào dự án mall**, với mục tiêu:
+> 👉 **import – truy vấn – cập nhật – xoá** thông tin sản phẩm trong Elasticsearch.
 
-👉 Trong hệ thống mall:
-
-> *MySQL = nguồn dữ liệu gốc*
-> *Elasticsearch = công cụ tìm kiếm*
+Hãy tưởng tượng thế này 🧠:
+👉 **MySQL** lo lưu trữ dữ liệu
+👉 **Elasticsearch** lo **tìm kiếm siêu nhanh**
+👉 **mall** kết hợp cả hai để tạo trải nghiệm tìm sản phẩm “nhanh như chớp ⚡”
 
 ---
 
-## ⚙️ 2. Cài đặt và chạy Elasticsearch
+## Giới thiệu framework được sử dụng trong dự án
 
-### 📥 Bước 1: Tải Elasticsearch
+### Elasticsearch
 
-* Phiên bản sử dụng: **6.2.2**
+> **Elasticsearch** là một công cụ **tìm kiếm và phân tích dữ liệu**:
+
+* Phân tán (distributed)
+* Có thể mở rộng (scalable)
+* Thời gian thực (real-time)
+
+Ngay từ khi dự án bắt đầu, Elasticsearch đã cho phép bạn:
+
+* 🔍 Tìm kiếm toàn văn (full-text search)
+* 📊 Thống kê dữ liệu theo thời gian thực
+
+---
+
+### Cài đặt và sử dụng Elasticsearch
+
+#### Bước 1: Tải Elasticsearch
+
+* Tải **Elasticsearch 6.2.2 (zip)** và giải nén
 * Link tải:
   [https://www.elastic.co/cn/downloads/past-releases/elasticsearch-6-2-2](https://www.elastic.co/cn/downloads/past-releases/elasticsearch-6-2-2)
 
-![Image](https://cdn.sanity.io/images/me0ej585/production/df5883cb815395012d333f4415b1f21798493461-1280x800.png)
-
-![Image](https://cdn2.percipio.com/public/b/f880c4e4-d484-4b94-81be-b6dd4240abca/image001.jpg)
+![](../images/arch_screen_25.png)
 
 ---
 
-### 🧩 Bước 2: Cài plugin phân tích tiếng Trung (IK Analyzer)
+#### Bước 2: Cài plugin phân tích tiếng Trung (IK)
 
-> Elasticsearch **KHÔNG hỗ trợ phân từ tiếng Trung mặc định**
-> → Phải cài thêm plugin
-
-Chạy lệnh trong thư mục `bin`:
+Trong thư mục `elasticsearch-6.2.2/bin`, chạy lệnh:
 
 ```bash
 elasticsearch-plugin install https://github.com/medcl/elasticsearch-analysis-ik/releases/download/v6.2.2/elasticsearch-analysis-ik-6.2.2.zip
 ```
 
-![Image](https://opengraph.githubassets.com/efd97e24c04fe30c9e252ea96aca63660f238d73266d4515233202c7d1d6f8f0/infinilabs/analysis-ik)
+👉 Plugin này giúp Elasticsearch **tách từ tiếng Trung** (giống như tokenizer cho tiếng Việt/Anh).
 
-![Image](https://opengraph.githubassets.com/f67730197c3f2b45a9519bf3fd3d2cdb9665d0a02f1625fbdd0f9ef103c97528/liuxun666/elasticsearch-analysis-ik)
-
-💡 Head First nhớ:
-
-> *Không có phân từ → tìm kiếm tiếng Trung coi như “mù chữ”*
+![](../images/arch_screen_26.png)
 
 ---
 
-### ▶️ Bước 3: Chạy Elasticsearch
+#### Bước 3: Khởi động Elasticsearch
 
-```bash
-elasticsearch.bat
+Chạy file:
+
+```text
+bin/elasticsearch.bat
 ```
 
-![Image](https://i.sstatic.net/yYgmj.png)
-
-![Image](https://www.exactsoftware.com/docs/DocBinBlob.aspx?ID=%7Be59b1ecb-8ec3-4834-a1bd-b6e789af4a69%7D)
+![](../images/arch_screen_27.png)
 
 ---
 
-### 🖥️ Bước 4: Cài Kibana (UI cho Elasticsearch)
+#### Bước 4: Cài Kibana (giao diện quản lý ES)
 
-* Phiên bản: **6.2.2**
+* Tải **Kibana 6.2.2**
 * Link tải:
   [https://artifacts.elastic.co/downloads/kibana/kibana-6.2.2-windows-x86_64.zip](https://artifacts.elastic.co/downloads/kibana/kibana-6.2.2-windows-x86_64.zip)
 
-![Image](https://vitalflux.com/wp-content/uploads/2018/03/kibana.png)
+![](../images/arch_screen_28.png)
 
-![Image](https://us1.discourse-cdn.com/elastic/original/3X/0/7/07bc9d2b1c690d576c55ecf5338f1201cb7a3e5a.png)
+---
+
+#### Bước 5: Khởi động Kibana
 
 Chạy:
 
-```bash
-kibana.bat
+```text
+bin/kibana.bat
 ```
 
-Truy cập:
+![](../images/arch_screen_29.png)
+
+---
+
+#### Bước 6: Truy cập giao diện Kibana
+
+Mở trình duyệt và truy cập:
 
 ```
 http://localhost:5601
 ```
 
-![Image](https://static-www.elastic.co/v3/assets/bltefdd0b53724fa2ce/bltd01281e2aa656f58/6881472454ac0d3c9890ee66/illustrated-screenshot-hero-dashboards.png)
+![](../images/arch_screen_30.png)
 
-![Image](https://play.vidyard.com/5veanmC18pMFPpf4RBVvUR.jpg)
-
----
-
-## 🌱 3. Spring Data Elasticsearch
-
-> **Spring Data Elasticsearch** giúp bạn thao tác Elasticsearch
-> **giống hệt JPA / MyBatis Repository**
-
-👉 Ít code hơn
-👉 Đọc dễ hơn
-👉 Bảo trì sướng hơn 😄
+🎉 Chúc mừng! Bạn đã có **bảng điều khiển Elasticsearch**.
 
 ---
 
-### 🏷️ Các annotation quan trọng
+## Spring Data Elasticsearch
 
-#### `@Document` – tương đương bảng trong DB
+> **Spring Data Elasticsearch** cho phép bạn thao tác Elasticsearch theo phong cách **Spring Data quen thuộc**, giúp:
+
+* Giảm code lặp
+* Không cần viết nhiều boilerplate
+* Code gọn – dễ đọc – dễ bảo trì
+
+---
+
+### Các annotation thường dùng
+
+#### `@Document`
+
+👉 Tương đương **database + table** trong MySQL
 
 ```java
-@Document(indexName = "pms", type = "product")
+@Document(
+  indexName = "pms", // giống database
+  type = "product", // giống table
+  shards = 1,
+  replicas = 0
+)
 ```
-
-👉 index = database
-👉 type = table
 
 ---
 
-#### `@Id` – khóa chính
+#### `@Id`
+
+👉 Chính là **primary key** của document
 
 ```java
 @Id
@@ -143,42 +144,121 @@ private Long id;
 
 ---
 
-#### `@Field` – mapping field
+#### `@Field`
+
+👉 Dùng để cấu hình **kiểu dữ liệu & cách lập chỉ mục**
 
 ```java
-@Field(type = FieldType.Keyword)
-private String brandName;
-```
-
-👉 `Keyword` → không phân từ
-👉 `Text + analyzer` → có phân từ
-
-💡 Head First nhớ:
-
-> *Field nào cần search → Text + analyzer*
-
----
-
-## 🧠 4. Chiến lược mapping cho sản phẩm
-
-* ❌ Không phân từ: mã SP, tên brand
-* ✅ Có phân từ: tên SP, tiêu đề, keyword
-
-```java
-@Field(analyzer = "ik_max_word", type = FieldType.Text)
-private String name;
+@Field(
+  type = FieldType.Text,
+  analyzer = "ik_max_word"
+)
 ```
 
 ---
 
-## 🧱 5. EsProduct – document sản phẩm
+#### `FieldType`
 
-> Đây là **phiên bản search** của Product
-> (KHÔNG phải entity MySQL)
+Một số kiểu thường dùng:
+
+* `Text` → có phân từ + lập index
+* `Keyword` → **không phân từ**
+* `Nested` → object lồng nhau
+* `Auto` → ES tự đoán kiểu
+
+---
+
+## Thao tác dữ liệu với Spring Data Elasticsearch
+
+### 1️⃣ Kế thừa `ElasticsearchRepository`
+
+👉 Tự động có:
+
+* save
+* delete
+* findById
+* search
+
+![](../images/arch_screen_31.png)
+
+---
+
+### 2️⃣ Derive Query – viết query bằng… tên hàm 😲
 
 ```java
-@Document(indexName = "pms", type = "product")
-public class EsProduct {
+Page<EsProduct> findByNameOrSubTitleOrKeywords(
+    String name,
+    String subTitle,
+    String keywords,
+    Pageable page
+);
+```
+
+👉 Không cần SQL
+👉 Không cần DSL
+👉 Spring tự hiểu!
+
+IDEA còn **auto suggest field** cho bạn nữa 👇
+
+![](../images/arch_screen_32.png)
+
+---
+
+### 3️⃣ Dùng `@Query` để viết DSL
+
+```java
+@Query("{"bool":{"must":{"field":{"name":"?0"}}}}")
+Page<EsProduct> findByName(String name, Pageable pageable);
+```
+
+👉 Khi cần **query phức tạp**, dùng cách này.
+
+---
+
+## Các bảng dữ liệu trong dự án
+
+* `pms_product` – thông tin sản phẩm
+* `pms_product_attribute` – thuộc tính sản phẩm
+* `pms_product_attribute_value` – giá trị thuộc tính
+
+---
+
+## Tích hợp Elasticsearch để tìm kiếm sản phẩm
+
+### Thêm dependency vào `pom.xml`
+
+```xml
+<dependency>
+  <groupId>org.springframework.boot</groupId>
+  <artifactId>spring-boot-starter-data-elasticsearch</artifactId>
+</dependency>
+```
+
+---
+
+### Cấu hình `application.yml`
+
+```yml
+data:
+  elasticsearch:
+    repositories:
+      enabled: true
+    cluster-nodes: 127.0.0.1:9300
+    cluster-name: elasticsearch
+```
+
+---
+
+### Tạo document `EsProduct`
+
+💡 **Quy tắc vàng**:
+
+* Không cần phân từ → `Keyword`
+* Cần tìm kiếm → `Text + ik_max_word`
+
+```java
+@Document(indexName = "pms", type = "product", shards = 1, replicas = 0)
+public class EsProduct implements Serializable {
     @Id
     private Long id;
 
@@ -188,137 +268,78 @@ public class EsProduct {
     @Field(analyzer = "ik_max_word", type = FieldType.Text)
     private String name;
 
-    @Field(analyzer = "ik_max_word", type = FieldType.Text)
-    private String subTitle;
-
-    @Field(analyzer = "ik_max_word", type = FieldType.Text)
-    private String keywords;
+    @Field(type = FieldType.Nested)
+    private List<EsProductAttributeValue> attrValueList;
 }
 ```
 
-💡 Head First note:
-
-> *Elasticsearch document ≠ MySQL entity*
-
 ---
 
-## 🗃️ 6. EsProductRepository – thao tác ES
+### Repository thao tác Elasticsearch
 
 ```java
 public interface EsProductRepository
-        extends ElasticsearchRepository<EsProduct, Long> {
+  extends ElasticsearchRepository<EsProduct, Long> {
 
-    Page<EsProduct> findByNameOrSubTitleOrKeywords(
-        String name,
-        String subTitle,
-        String keywords,
-        Pageable page
-    );
+  Page<EsProduct> findByNameOrSubTitleOrKeywords(
+      String name,
+      String subTitle,
+      String keywords,
+      Pageable page
+  );
 }
 ```
 
-👉 **Derived Query** – không cần viết DSL
-👉 IDE tự gợi ý field
+---
 
-![Image](https://developer.okta.com/assets-jekyll/blog/spring-data-elasticsearch/spring-data-collaboration-3a7aa7e4afe3d17ddbb14a785ae9b9dc6e57d44a73be00ae14fe3855d98c37a1.png)
+### Service & ServiceImpl
 
-![Image](https://i.sstatic.net/Xnhio.png)
+👉 Chịu trách nhiệm:
+
+* Import dữ liệu
+* Search
+* Create / Delete sản phẩm trong ES
+
+(code giữ nguyên như bản gốc)
 
 ---
 
-## 🧠 7. EsProductService – logic tìm kiếm
+### Controller – định nghĩa API
 
-### Các chức năng chính:
+👉 Các API:
 
-* Import toàn bộ sản phẩm từ DB
-* Thêm / xóa / batch delete
-* Tìm kiếm theo keyword
+* Import toàn bộ dữ liệu
+* Xoá theo ID
+* Xoá batch
+* Tạo sản phẩm
+* Tìm kiếm đơn giản
 
-💡 Head First nhớ:
-
-> *DB → ES = import*
-> *Search → chỉ hỏi ES*
-
----
-
-## ⚙️ 8. EsProductServiceImpl – triển khai
-
-### Import toàn bộ dữ liệu
-
-```java
-List<EsProduct> list = productDao.getAllEsProductList(null);
-productRepository.saveAll(list);
-```
-
-👉 1 lần import = ES có dữ liệu để search
+(code giữ nguyên)
 
 ---
 
-### Search sản phẩm
+## Test API
 
-```java
-return productRepository.findByNameOrSubTitleOrKeywords(
-    keyword, keyword, keyword, pageable
-);
-```
+### Import dữ liệu vào Elasticsearch
 
-💡 Head First:
-
-> *Search = OR nhiều field → trải nghiệm người dùng tốt hơn*
+![](../images/arch_screen_33.png)
+![](../images/arch_screen_34.png)
 
 ---
 
-## 🌐 9. EsProductController – API cho search
+### Tìm kiếm sản phẩm
 
-### Import dữ liệu
-
-```http
-POST /esProduct/importAll
-```
+![](../images/arch_screen_35.png)
+![](../images/arch_screen_36.png)
 
 ---
 
-### Search đơn giản
+## Mã nguồn dự án
 
-```http
-GET /esProduct/search/simple?keyword=iphone
-```
+👉 [https://github.com/macrozheng/mall-learning/tree/master/mall-tiny-06](https://github.com/macrozheng/mall-learning/tree/master/mall-tiny-06)
 
 ---
 
-## 🧪 10. Test API
+## 公众号
 
-### Import dữ liệu
-
-![Image](https://i.sstatic.net/KxkK8.png)
-
-![Image](https://i.sstatic.net/2Tupn.png)
-
----
-
-### Search sản phẩm
-
-![Image](https://www.elastic.co/guide/en/app-search/current/images/app-search/result-settings.png)
-
-![Image](https://images.contentstack.io/v3/assets/bltefdd0b53724fa2ce/blt0dcc1204d3090052/5ed91a7d08d08473f007ab9a/app-search-analytics-dashboard-blog.jpg)
-
----
-
-## 📦 Source code dự án
-
-🔗 GitHub:
-[https://github.com/macrozheng/mall-learning/tree/master/mall-tiny-06](https://github.com/macrozheng/mall-learning/tree/master/mall-tiny-06)
-
----
-
-## 📢 公众号
-
-![Image](https://opengraph.githubassets.com/0e4358626612706b3d9867e82818afa40c744572ddb56dcd795566d96379e1ae/macrozheng/mall)
-
-![Image](https://macro-oss.oss-cn-shenzhen.aliyuncs.com/mall/banner/qrcode_for_macrozheng_258.jpg)
-
-👉 Theo dõi để:
-
-* Hiểu Elasticsearch **từ mapping → search**
-* Áp dụng search cho dự án thật
-* Không đi đường vòng ❌
+![公众号图片](http://macro-oss.oss-cn-shenzhen.aliyuncs.com/mall/banner/qrcode_for_macrozheng_258.jpg)
