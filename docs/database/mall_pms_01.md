@@ -1,173 +1,257 @@
-学习不走弯路，[关注公众号](#公众号) 回复「学习路线」，获取mall项目专属学习路线！
+Học tập **không đi đường vòng** 🧭
+👉 [Theo dõi公众号](#公众号) và **trả lời “学习路线”** để nhận **lộ trình học riêng cho dự án mall**!
 
-# 商品模块数据库表解析（一）
+---
 
-> 本文主要对商品分类、品牌管理、商品类型这三个功能的表进行解析，采用功能与表结构对照的形式。表解析只会标注一些需要理解的字段，简单字段请自行对照表注释。
+# Phân tích bảng cơ sở dữ liệu của module Sản phẩm (Phần 1)
 
-## 商品分类
+> Bài viết này tập trung phân tích **3 chức năng cốt lõi của module sản phẩm**:
+>
+> * Phân loại sản phẩm
+> * Quản lý thương hiệu
+> * Loại sản phẩm (thuộc tính sản phẩm)
+>
+> Cách trình bày sẽ theo kiểu:
+> 👉 **chức năng ↔ cấu trúc bảng dữ liệu**
+>
+> ⚠️ Lưu ý:
+> Chỉ những **trường quan trọng cần hiểu** mới được giải thích.
+> Các trường đơn giản, bạn hãy **tự đối chiếu với comment trong bảng**.
 
-### 商品分类表
+---
+
+## 1️⃣ Phân loại sản phẩm
+
+### Bảng phân loại sản phẩm
 
 ```sql
 create table pms_product_category
 (
    id                   bigint not null auto_increment,
-   parent_id            bigint comment '上级分类的编号：0表示一级分类',
-   name                 varchar(64) comment '名称',
-   level                int(1) comment '分类级别：0->1级；1->2级',
-   product_count        int comment '商品数量',
-   product_unit         varchar(64) comment '商品单位',
-   nav_status           int(1) comment '是否显示在导航栏：0->不显示；1->显示',
-   show_status          int(1) comment '显示状态：0->不显示；1->显示',
-   sort                 int comment '排序',
-   icon                 varchar(255) comment '图标',
-   keywords             varchar(255) comment '关键字',
-   description          text comment '描述',
+   parent_id            bigint comment 'ID danh mục cha: 0 nghĩa là danh mục cấp 1',
+   name                 varchar(64) comment 'Tên danh mục',
+   level                int(1) comment 'Cấp danh mục: 0->cấp 1; 1->cấp 2',
+   product_count        int comment 'Số lượng sản phẩm',
+   product_unit         varchar(64) comment 'Đơn vị sản phẩm',
+   nav_status           int(1) comment 'Hiển thị trên thanh điều hướng: 0->không; 1->có',
+   show_status          int(1) comment 'Trạng thái hiển thị: 0->ẩn; 1->hiện',
+   sort                 int comment 'Thứ tự sắp xếp',
+   icon                 varchar(255) comment 'Icon',
+   keywords             varchar(255) comment 'Từ khóa',
+   description          text comment 'Mô tả',
    primary key (id)
 );
 ```
 
-### 管理端展现
+🧠 **Tư duy Head First**:
+Hãy hình dung đây là **một cây danh mục** 🌳
 
-- 商品分类列表
-![](../images/database_screen_02.png)
-- 添加商品分类
-![](../images/database_screen_01.png)
+* `parent_id = 0` → danh mục gốc
+* Các danh mục con trỏ ngược về danh mục cha
+* `level` giúp frontend biết đang ở tầng nào
 
+---
 
-### 移动端展现
+### Hiển thị trên trang quản trị
+
+* Danh sách phân loại sản phẩm
+  ![](../images/database_screen_02.png)
+
+* Thêm phân loại sản phẩm
+  ![](../images/database_screen_01.png)
+
+---
+
+### Hiển thị trên mobile
 
 ![](../images/database_screen_03.png)
 
-## 品牌管理
+👉 Cùng một bảng, nhưng **UI khác nhau** tùy nền tảng.
 
-### 商品品牌表
+---
+
+## 2️⃣ Quản lý thương hiệu
+
+### Bảng thương hiệu sản phẩm
 
 ```sql
 create table pms_brand
 (
    id                   bigint not null auto_increment,
-   name                 varchar(64) comment '名称',
-   first_letter         varchar(8) comment '首字母',
-   sort                 int comment '排序',
-   factory_status       int(1) comment '是否为品牌制造商：0->不是；1->是',
-   show_status          int(1) comment '是否显示',
-   product_count        int comment '产品数量',
-   product_comment_count int comment '产品评论数量',
-   logo                 varchar(255) comment '品牌logo',
-   big_pic              varchar(255) comment '专区大图',
-   brand_story          text comment '品牌故事',
+   name                 varchar(64) comment 'Tên thương hiệu',
+   first_letter         varchar(8) comment 'Chữ cái đầu',
+   sort                 int comment 'Thứ tự sắp xếp',
+   factory_status       int(1) comment 'Có phải nhà sản xuất không: 0->không; 1->có',
+   show_status          int(1) comment 'Có hiển thị không',
+   product_count        int comment 'Số lượng sản phẩm',
+   product_comment_count int comment 'Số lượng bình luận sản phẩm',
+   logo                 varchar(255) comment 'Logo thương hiệu',
+   big_pic              varchar(255) comment 'Ảnh lớn khu vực thương hiệu',
+   brand_story          text comment 'Câu chuyện thương hiệu',
    primary key (id)
 );
 ```
 
-### 管理端展现
+🧠 **Hiểu nhanh**:
 
-- 品牌列表
-![](../images/database_screen_04.png)
-- 添加品牌
-![](../images/database_screen_05.png)
+* `factory_status` → dùng để phân biệt **hãng sản xuất** và **nhãn hiệu phân phối**
+* `first_letter` → dùng cho **sắp xếp A–Z** trên mobile
 
-### 移动端展现
+---
+
+### Hiển thị trên trang quản trị
+
+* Danh sách thương hiệu
+  ![](../images/database_screen_04.png)
+
+* Thêm thương hiệu
+  ![](../images/database_screen_05.png)
+
+---
+
+### Hiển thị trên mobile
 
 ![](../images/database_screen_06.png)
 
-## 商品类型
+---
 
-> 商品类型即商品属性，主要是指商品的规格和参数，规格用于用户购买商品时选择，参数用于标示商品属性及搜索时筛选。
+## 3️⃣ Loại sản phẩm (Thuộc tính sản phẩm)
 
-### 相关表结构
+> **Loại sản phẩm = thuộc tính sản phẩm**
+>
+> Gồm 2 nhóm chính:
+>
+> * **规格 (Specification – Quy cách)** → người dùng chọn khi mua (màu, size…)
+> * **参数 (Parameter – Tham số)** → mô tả sản phẩm, dùng để lọc & tìm kiếm
 
-#### 商品属性分类表
+---
+
+### Cấu trúc bảng liên quan
+
+#### Bảng phân loại thuộc tính sản phẩm
 
 ```sql
 create table pms_product_attribute_category
 (
    id                   bigint not null auto_increment,
-   name                 varchar(64) comment '名称',
-   attribute_count      int comment '属性数量',
-   param_count          int comment '参数数量',
+   name                 varchar(64) comment 'Tên',
+   attribute_count      int comment 'Số lượng thuộc tính',
+   param_count          int comment 'Số lượng tham số',
    primary key (id)
 );
 ```
 
-#### 商品属性表
+👉 Dùng để **gom nhóm thuộc tính** (ví dụ: Điện thoại, Laptop…)
 
-> type字段用于控制其是规格还是参数
+---
+
+#### Bảng thuộc tính sản phẩm
+
+> Trường `type` quyết định đây là **quy cách** hay **tham số**
 
 ```sql
 create table pms_product_attribute
 (
    id                   bigint not null auto_increment,
-   product_attribute_category_id bigint comment '商品属性分类id',
-   name                 varchar(64) comment '名称',
-   select_type          int(1) comment '属性选择类型：0->唯一；1->单选；2->多选；对应属性和参数意义不同；',
-   input_type           int(1) comment '属性录入方式：0->手工录入；1->从列表中选取',
-   input_list           varchar(255) comment '可选值列表，以逗号隔开',
-   sort                 int comment '排序字段：最高的可以单独上传图片',
-   filter_type          int(1) comment '分类筛选样式：1->普通；1->颜色',
-   search_type          int(1) comment '检索类型；0->不需要进行检索；1->关键字检索；2->范围检索',
-   related_status       int(1) comment '相同属性产品是否关联；0->不关联；1->关联',
-   hand_add_status      int(1) comment '是否支持手动新增；0->不支持；1->支持',
-   type                 int(1) comment '属性的类型；0->规格；1->参数',
+   product_attribute_category_id bigint comment 'ID nhóm thuộc tính',
+   name                 varchar(64) comment 'Tên thuộc tính',
+   select_type          int(1) comment 'Cách chọn: 0->duy nhất; 1->đơn chọn; 2->đa chọn',
+   input_type           int(1) comment 'Cách nhập: 0->nhập tay; 1->chọn từ danh sách',
+   input_list           varchar(255) comment 'Danh sách giá trị, cách nhau bằng dấu phẩy',
+   sort                 int comment 'Thứ tự (cao nhất có thể upload ảnh)',
+   filter_type          int(1) comment 'Kiểu lọc: 0->thường; 1->màu sắc',
+   search_type          int(1) comment 'Kiểu tìm kiếm: 0->không; 1->keyword; 2->range',
+   related_status       int(1) comment 'Sản phẩm cùng thuộc tính có liên kết không',
+   hand_add_status      int(1) comment 'Có cho thêm thủ công không',
+   type                 int(1) comment '0->quy cách; 1->tham số',
    primary key (id)
 );
 ```
 
-#### 商品属性值表
+🧠 **Cách nhớ nhanh**:
 
-> 如果对应的参数是规格且规格支持手动添加，那么该表用于存储手动新增的值；如果对应的商品属性是参数，那么该表用于存储参数的值。
+* **规格 (type=0)** → tạo **SKU**
+* **参数 (type=1)** → hiển thị & lọc
+
+---
+
+#### Bảng giá trị thuộc tính sản phẩm
+
+> Tùy từng trường hợp mà bảng này lưu:
+>
+> * Giá trị **quy cách thêm thủ công**
+> * Hoặc **giá trị tham số**
 
 ```sql
 create table pms_product_attribute_value
 (
    id                   bigint not null auto_increment,
-   product_id           bigint comment '商品id',
-   product_attribute_id bigint comment '商品属性id',
-   value                varchar(64) comment '手动添加规格或参数的值，参数单值，规格有多个时以逗号隔开',
+   product_id           bigint comment 'ID sản phẩm',
+   product_attribute_id bigint comment 'ID thuộc tính',
+   value                varchar(64) comment 'Giá trị (quy cách nhiều giá trị cách nhau bằng dấu phẩy)',
    primary key (id)
 );
 ```
 
-#### 商品分类和属性的关系表
+---
 
-> 用于选中分类后搜索时生成筛选属性。
+#### Bảng quan hệ giữa danh mục và thuộc tính
+
+> Dùng để **tạo bộ lọc khi tìm kiếm theo danh mục**
 
 ```sql
 create table pms_product_category_attribute_relation
 (
    id                   bigint not null auto_increment,
-   product_category_id  bigint comment '商品分类id',
-   product_attribute_id bigint comment '商品属性id',
+   product_category_id  bigint comment 'ID danh mục',
+   product_attribute_id bigint comment 'ID thuộc tính',
    primary key (id)
 );
 ```
 
-### 管理端展现
+👉 Đây chính là thứ giúp:
 
-- 商品属性分类列表
-![](../images/database_screen_07.png)
-- 添加商品属性分类  
-![](../images/database_screen_08.png)
-- 商品规格列表
-![](../images/database_screen_09.png)
-- 商品参数列表
-![](../images/database_screen_10.png)
-- 添加商品属性
-![](../images/database_screen_11.png)
-- 添加商品时，选中商品属性分类，就会显示该分类的属性，用于生成sku
-![](../images/database_screen_12.png)
-- 添加商品时，选中商品属性分类，会显示该分类的参数用于录入
-![](../images/database_screen_13.png)
+> “Chọn danh mục → hiện bộ lọc phù hợp”
 
-### 移动端展现
+---
 
-- 选择商品规格  
-![](../images/database_screen_14.png)
-- 查看商品参数  
-![](../images/database_screen_15.png)
-- 搜索商品时用于选择分类后的筛选  
-![](../images/database_screen_16.png)
+### Hiển thị trên trang quản trị
+
+* Danh sách nhóm thuộc tính
+  ![](../images/database_screen_07.png)
+
+* Thêm nhóm thuộc tính
+  ![](../images/database_screen_08.png)
+
+* Danh sách quy cách
+  ![](../images/database_screen_09.png)
+
+* Danh sách tham số
+  ![](../images/database_screen_10.png)
+
+* Thêm thuộc tính
+  ![](../images/database_screen_11.png)
+
+* Khi thêm sản phẩm, chọn nhóm thuộc tính → hiển thị quy cách để tạo SKU
+  ![](../images/database_screen_12.png)
+
+* Khi thêm sản phẩm, hiển thị tham số để nhập
+  ![](../images/database_screen_13.png)
+
+---
+
+### Hiển thị trên mobile
+
+* Chọn quy cách sản phẩm
+  ![](../images/database_screen_14.png)
+
+* Xem tham số sản phẩm
+  ![](../images/database_screen_15.png)
+
+* Lọc sản phẩm khi tìm kiếm theo danh mục
+  ![](../images/database_screen_16.png)
+
+---
 
 ## 公众号
 
