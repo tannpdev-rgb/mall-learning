@@ -1,359 +1,222 @@
-Học tập **không đi đường vòng** 🧭
-👉 [Theo dõi公众号](#公众号) và **trả lời “学习路线”** để nhận **lộ trình học riêng cho dự án mall**!
+## 1️⃣ Chỉnh sửa sản phẩm (bổ sung ví dụ Head First)
 
 ---
 
-# Phân tích bảng cơ sở dữ liệu của module Sản phẩm (Phần 2)
+### 📦 Bảng sản phẩm (`pms_product`) – ví dụ thực tế
 
-> Tiếp nối bài trước, bài viết này tập trung phân tích **3 khối chức năng lớn**:
->
-> 1. Chỉnh sửa sản phẩm
-> 2. Đánh giá sản phẩm & phản hồi
-> 3. Duyệt sản phẩm & ghi nhận thao tác
->
-> Cách tiếp cận vẫn là:
-> 👉 **Chức năng ↔ Bảng dữ liệu tương ứng**
+🧠 **Hãy tưởng tượng bạn đang thêm sản phẩm: *iPhone 15 Pro 128GB***
 
----
+Một dòng dữ liệu trong `pms_product` sẽ trông như sau:
 
-## 1️⃣ Chỉnh sửa sản phẩm
+| field                         | giá trị ví dụ             |
+| ----------------------------- | ------------------------- |
+| id                            | 101                       |
+| brand_id                      | 1 (Apple)                 |
+| product_category_id           | 2 (Smartphone)            |
+| product_attribute_category_id | 1 (Thuộc tính Điện thoại) |
+| name                          | iPhone 15 Pro             |
+| product_sn                    | IP15PRO-128               |
+| price                         | 29990000                  |
+| original_price                | 32990000                  |
+| promotion_price               | 28990000                  |
+| publish_status                | 1 (đang bán)              |
+| verify_status                 | 1 (đã duyệt)              |
+| stock                         | 500                       |
+| low_stock                     | 20                        |
+| promotion_type                | 1 (dùng giá khuyến mãi)   |
+| brand_name                    | Apple                     |
+| product_category_name         | Smartphone                |
 
-### Các bảng liên quan
+👉 **Hiểu theo Head First**:
 
----
+* `pms_product` = **thông tin chung**
+* KHÔNG chứa:
 
-### 📦 Bảng sản phẩm (pms_product)
-
-> Thông tin sản phẩm được chia thành **4 nhóm lớn**:
->
-> 1. Thông tin cơ bản
-> 2. Thông tin khuyến mãi
-> 3. Thông tin thuộc tính
-> 4. Quan hệ liên kết sản phẩm
->
-> 👉 Bảng `pms_product` chính là **“trái tim”** của toàn bộ module sản phẩm.
-
-```sql
-create table pms_product
-(
-   id                   bigint not null auto_increment,
-   brand_id             bigint comment 'ID thương hiệu',
-   product_category_id  bigint comment 'ID danh mục sản phẩm',
-   feight_template_id   bigint comment 'ID mẫu phí vận chuyển',
-   product_attribute_category_id bigint comment 'ID nhóm thuộc tính',
-   name                 varchar(64) not null comment 'Tên sản phẩm',
-   pic                  varchar(255) comment 'Hình đại diện',
-   product_sn           varchar(64) not null comment 'Mã sản phẩm',
-   delete_status        int(1) comment 'Trạng thái xóa: 0->chưa xóa; 1->đã xóa',
-   publish_status       int(1) comment 'Trạng thái bán: 0->ngừng bán; 1->đang bán',
-   new_status           int(1) comment 'Sản phẩm mới: 0->không; 1->có',
-   recommand_status     int(1) comment 'Trạng thái đề xuất',
-   verify_status        int(1) comment 'Trạng thái duyệt',
-   sort                 int comment 'Thứ tự sắp xếp',
-   sale                 int comment 'Số lượng bán',
-   price                decimal(10,2) comment 'Giá bán',
-   promotion_price      decimal(10,2) comment 'Giá khuyến mãi',
-   gift_growth          int default 0 comment 'Điểm tăng trưởng tặng kèm',
-   gift_point           int default 0 comment 'Điểm thưởng',
-   use_point_limit      int comment 'Giới hạn điểm được dùng',
-   sub_title            varchar(255) comment 'Tiêu đề phụ',
-   description          text comment 'Mô tả sản phẩm',
-   original_price       decimal(10,2) comment 'Giá gốc',
-   stock                int comment 'Tồn kho',
-   low_stock            int comment 'Ngưỡng cảnh báo tồn kho',
-   unit                 varchar(16) comment 'Đơn vị',
-   weight               decimal(10,2) comment 'Trọng lượng (gram)',
-   preview_status       int(1) comment 'Sản phẩm xem trước',
-   service_ids          varchar(64) comment 'Dịch vụ kèm theo',
-   keywords             varchar(255) comment 'Từ khóa',
-   note                 varchar(255) comment 'Ghi chú',
-   album_pics           varchar(255) comment 'Ảnh album',
-   detail_title         varchar(255) comment 'Tiêu đề chi tiết',
-   detail_desc          text comment 'Mô tả chi tiết',
-   detail_html          text comment 'Chi tiết web',
-   detail_mobile_html   text comment 'Chi tiết mobile',
-   promotion_start_time datetime comment 'Bắt đầu khuyến mãi',
-   promotion_end_time   datetime comment 'Kết thúc khuyến mãi',
-   promotion_per_limit  int comment 'Giới hạn mua',
-   promotion_type       int(1) comment 'Loại khuyến mãi',
-   product_category_name varchar(255) comment 'Tên danh mục',
-   brand_name           varchar(255) comment 'Tên thương hiệu',
-   primary key (id)
-);
-```
-
-🧠 **Head First tip**:
-Hãy tưởng tượng `pms_product` giống như **hồ sơ gốc của sản phẩm**.
-Các bảng khác chỉ là **phần mở rộng** xoay quanh nó.
+  * Màu
+  * Dung lượng
+  * SKU chi tiết
+    ➡️ Những thứ đó nằm ở **bảng khác**
 
 ---
 
-### 🧩 Bảng SKU sản phẩm
+### 🧩 Bảng SKU (`pms_sku_stock`) – ví dụ cực kỳ quan trọng
 
-> **SKU (Stock Keeping Unit)** = đơn vị tồn kho
-> **SPU (Standard Product Unit)** = đơn vị sản phẩm chuẩn
->
-> Ví dụ:
->
-> * *iPhone XS* → SPU
-> * *iPhone XS | 64GB | Bạc | Bản quốc tế* → SKU
+🧠 **Một SPU → nhiều SKU**
 
-```sql
-create table pms_sku_stock
-(
-   id                   bigint not null auto_increment,
-   product_id           bigint comment 'ID sản phẩm',
-   sku_code             varchar(64) not null comment 'Mã SKU',
-   price                decimal(10,2) comment 'Giá',
-   stock                int default 0 comment 'Tồn kho',
-   low_stock            int comment 'Tồn kho cảnh báo',
-   sp1                  varchar(64) comment 'Thuộc tính 1',
-   sp2                  varchar(64) comment 'Thuộc tính 2',
-   sp3                  varchar(64) comment 'Thuộc tính 3',
-   pic                  varchar(255) comment 'Ảnh hiển thị',
-   sale                 int comment 'Số lượng bán',
-   promotion_price      decimal(10,2) comment 'Giá khuyến mãi SKU',
-   lock_stock           int default 0 comment 'Tồn kho bị khóa',
-   primary key (id)
-);
-```
+Sản phẩm: **iPhone 15 Pro**
 
-👉 Một sản phẩm (`pms_product`)
-👉 có **nhiều SKU** (`pms_sku_stock`)
+| SKU   | Màu   | Dung lượng |
+| ----- | ----- | ---------- |
+| SKU-1 | Đen   | 128GB      |
+| SKU-2 | Đen   | 256GB      |
+| SKU-3 | Trắng | 128GB      |
+| SKU-4 | Trắng | 256GB      |
+
+👉 Mỗi dòng = **1 SKU**
+
+| field      | ví dụ             |
+| ---------- | ----------------- |
+| product_id | 101               |
+| sku_code   | IP15PRO-BLACK-128 |
+| sp1        | Đen               |
+| sp2        | 128GB             |
+| price      | 29990000          |
+| stock      | 120               |
+
+🧠 **Tư duy chuẩn backend**:
+
+> “Người dùng mua cái gì → trừ tồn kho cái đó”
+
+➡️ Backend **CHỈ trừ tồn kho ở `pms_sku_stock`**, không trừ ở `pms_product`
 
 ---
 
-### 📉 Bảng giá bậc thang (Ladder Price)
+### 📉 Bảng giá bậc thang (`pms_product_ladder`) – ví dụ
 
-> Mua càng nhiều → giá càng rẻ
-> Ví dụ: mua 2 sản phẩm → giảm 20%
+🎯 **Chiến lược bán sỉ / combo**
 
-```sql
-create table pms_product_ladder
-(
-   id                   bigint not null auto_increment,
-   product_id           bigint comment 'ID sản phẩm',
-   count                int comment 'Số lượng đạt',
-   discount             decimal(10,2) comment 'Tỷ lệ giảm',
-   price                decimal(10,2) comment 'Giá sau giảm',
-   primary key (id)
-);
-```
+| product_id | count | discount |
+| ---------- | ----- | -------- |
+| 101        | 2     | 0.9      |
+| 101        | 5     | 0.8      |
 
----
+👉 Nghĩa là:
 
-### 💰 Bảng giảm giá theo số tiền (Full Reduction)
+* Mua **2 cái** → giảm **10%**
+* Mua **5 cái** → giảm **20%**
 
-> Mua đủ tiền → được giảm
-> Ví dụ: mua đủ 1.000.000đ → giảm 100.000đ
+🧠 Frontend sẽ hỏi backend:
 
-```sql
-create table pms_product_full_reduction
-(
-   id                   bigint not null auto_increment,
-   product_id           bigint comment 'ID sản phẩm',
-   full_price           decimal(10,2) comment 'Số tiền đạt',
-   reduce_price         decimal(10,2) comment 'Số tiền giảm',
-   primary key (id)
-);
-```
+> “Mua 3 cái thì áp giá nào?”
+
+➡️ Backend chọn **mức cao nhất thỏa điều kiện**
 
 ---
 
-### 👑 Bảng giá theo cấp độ thành viên
+### 💰 Bảng giảm theo số tiền (`pms_product_full_reduction`) – ví dụ
 
-> Mỗi cấp độ thành viên → một mức giá khác nhau
-> ⚠️ Thiết kế này còn hạn chế, có thể mở rộng theo % hoặc mức giảm linh hoạt hơn.
+| product_id | full_price | reduce_price |
+| ---------- | ---------- | ------------ |
+| 101        | 30000000   | 2000000      |
 
-```sql
-create table pms_member_price
-(
-   id                   bigint not null auto_increment,
-   product_id           bigint comment 'ID sản phẩm',
-   member_level_id      bigint comment 'ID cấp độ thành viên',
-   member_price         decimal(10,2) comment 'Giá thành viên',
-   member_level_name    varchar(100) comment 'Tên cấp độ',
-   primary key (id)
-);
-```
+👉 Nếu tổng tiền ≥ 30 triệu
+👉 Giảm **2 triệu**
+
+🧠 **Khác ladder price ở chỗ**:
+
+* Ladder → dựa trên **số lượng**
+* Full reduction → dựa trên **tổng tiền**
 
 ---
 
-### Hiển thị trên trang quản trị
+### 👑 Bảng giá theo cấp độ thành viên (`pms_member_price`) – ví dụ
 
-#### Nhập thông tin sản phẩm
+| member_level | giá      |
+| ------------ | -------- |
+| Silver       | 29500000 |
+| Gold         | 28500000 |
+| Diamond      | 27500000 |
 
-![](../images/database_screen_22.png)
+🧠 Khi user checkout:
 
-#### Cấu hình khuyến mãi
-
-![](../images/database_screen_17.png)
-
-##### Khuyến mãi đặc biệt
-
-![](../images/database_screen_18.png)
-
-##### Giá theo thành viên
-
-![](../images/database_screen_19.png)
-
-##### Giá bậc thang
-
-![](../images/database_screen_20.png)
-
-##### Giảm giá theo mức tiền
-
-![](../images/database_screen_21.png)
-
-#### Nhập thuộc tính sản phẩm
-
-![](../images/database_screen_23.png)
-![](../images/database_screen_24.png)
-![](../images/database_screen_25.png)
-
-#### Chọn sản phẩm liên quan
-
-![](../images/database_screen_26.png)
+1. Xác định **member_level**
+2. Nếu có giá member → **ưu tiên dùng**
+3. Nếu không → fallback về giá thường / khuyến mãi
 
 ---
 
-### Hiển thị trên mobile
-
-#### Giới thiệu sản phẩm
-
-![](../images/database_screen_27.png)
-
-#### Chi tiết hình ảnh & nội dung
-
-![](../images/database_screen_28.png)
-
-#### Chuyên đề liên quan
-
-![](../images/database_screen_29.png)
+## 2️⃣ Đánh giá sản phẩm & phản hồi – ví dụ Head First
 
 ---
 
-## 2️⃣ Đánh giá sản phẩm & phản hồi
+### ⭐ Bảng đánh giá (`pms_comment`) – ví dụ
 
-### Các bảng liên quan
+Người dùng A mua:
 
----
+> iPhone 15 Pro – Đen – 128GB
 
-### ⭐ Bảng đánh giá sản phẩm
+| field             | ví dụ                   |
+| ----------------- | ----------------------- |
+| product_id        | 101                     |
+| member_nick_name  | nguyenvana              |
+| star              | 5                       |
+| product_attribute | Màu: Đen; Bộ nhớ: 128GB |
+| content           | Máy rất mượt, pin tốt   |
+| pics              | img1.jpg,img2.jpg       |
+| show_status       | 1                       |
 
-```sql
-create table pms_comment
-(
-   id                   bigint not null auto_increment,
-   product_id           bigint comment 'ID sản phẩm',
-   member_nick_name     varchar(255) comment 'Tên người dùng',
-   product_name         varchar(255) comment 'Tên sản phẩm',
-   star                 int(3) comment 'Số sao (0–5)',
-   member_ip            varchar(64) comment 'IP người đánh giá',
-   create_time          datetime comment 'Thời gian tạo',
-   show_status          int(1) comment 'Có hiển thị hay không',
-   product_attribute    varchar(255) comment 'Thuộc tính lúc mua',
-   collect_couont       int comment 'Lượt thích',
-   read_count           int comment 'Lượt xem',
-   content              text comment 'Nội dung',
-   pics                 varchar(1000) comment 'Ảnh đính kèm',
-   member_icon          varchar(255) comment 'Avatar',
-   replay_count         int comment 'Số phản hồi',
-   primary key (id)
-);
-```
+🧠 **Vì sao lưu `product_attribute` dưới dạng text?**
+
+👉 Để:
+
+* Biết user đánh giá **SKU nào**
+* Hiển thị đúng thông tin khi đọc review
 
 ---
 
-### 💬 Bảng phản hồi đánh giá
+### 💬 Bảng phản hồi (`pms_comment_replay`) – ví dụ
 
-```sql
-create table pms_comment_replay
-(
-   id                   bigint not null auto_increment,
-   comment_id           bigint comment 'ID đánh giá',
-   member_nick_name     varchar(255) comment 'Tên người phản hồi',
-   member_icon          varchar(255) comment 'Avatar',
-   content              varchar(1000) comment 'Nội dung',
-   create_time          datetime comment 'Thời gian',
-   type                 int(1) comment '0->người dùng; 1->admin',
-   primary key (id)
-);
-```
+| comment_id | type | content                    |
+| ---------- | ---- | -------------------------- |
+| 5001       | 0    | Mình cũng thấy pin rất tốt |
+| 5001       | 1    | Shop cảm ơn bạn đã ủng hộ  |
+
+🧠 `type` giúp frontend:
+
+* Gắn nhãn **Admin**
+* Hiển thị avatar khác
 
 ---
 
-### Hiển thị trên mobile
-
-#### Danh sách đánh giá
-
-![](../images/database_screen_30.png)
-
-#### Chi tiết đánh giá
-
-![](../images/database_screen_31.png)
-
-#### Danh sách phản hồi
-
-![](../images/database_screen_32.png)
+## 3️⃣ Duyệt sản phẩm & log thao tác – ví dụ Head First
 
 ---
 
-## 3️⃣ Duyệt sản phẩm & ghi nhận thao tác
+### 📋 Bảng duyệt sản phẩm (`pms_product_vertify_record`)
+
+🧠 **Luồng thực tế**:
+
+1. Nhân viên tạo sản phẩm
+2. Trạng thái: `verify_status = 0`
+3. Admin duyệt
+
+| product_id | status | detail           |
+| ---------- | ------ | ---------------- |
+| 101        | 2      | Thông tin hợp lệ |
+
+👉 Nếu bị từ chối:
+
+| status | detail                  |
+| ------ | ----------------------- |
+| 0      | Thiếu hình ảnh chi tiết |
 
 ---
 
-### 📋 Bảng ghi nhận duyệt sản phẩm
+### 📝 Bảng log thao tác (`pms_product_operate_log`) – ví dụ
 
-```sql
-create table pms_product_vertify_record
-(
-   id                   bigint not null auto_increment,
-   product_id           bigint comment 'ID sản phẩm',
-   create_time          datetime comment 'Thời gian',
-   vertify_man          varchar(64) comment 'Người duyệt',
-   status               int(1) comment '0->không duyệt; 2->đã duyệt',
-   detail               varchar(255) comment 'Chi tiết phản hồi',
-   primary key (id)
-);
-```
+Admin đổi giá:
 
-👉 Dùng cho **workflow kiểm duyệt sản phẩm**.
+| field       | ví dụ    |
+| ----------- | -------- |
+| product_id  | 101      |
+| price_old   | 29990000 |
+| price_new   | 28990000 |
+| operate_man | admin01  |
 
----
+🧠 **Tại sao bảng này cực kỳ quan trọng?**
 
-### 📝 Bảng log thao tác sản phẩm
+* Truy trách nhiệm
+* Xem lịch sử thay đổi
+* Phục vụ audit / dispute
 
-```sql
-create table pms_product_operate_log
-(
-   id                   bigint not null auto_increment,
-   product_id           bigint comment 'ID sản phẩm',
-   price_old            decimal(10,2) comment 'Giá cũ',
-   price_new            decimal(10,2) comment 'Giá mới',
-   sale_price_old       decimal(10,2) comment 'Giá KM cũ',
-   sale_price_new       decimal(10,2) comment 'Giá KM mới',
-   gift_point_old       int comment 'Điểm cũ',
-   gift_point_new       int comment 'Điểm mới',
-   use_point_limit_old  int comment 'Giới hạn điểm cũ',
-   use_point_limit_new  int comment 'Giới hạn điểm mới',
-   operate_man          varchar(64) comment 'Người thao tác',
-   create_time          datetime comment 'Thời gian',
-   primary key (id)
-);
-```
-
-🧠 **Hiểu nhanh**:
-Bảng này giống như **audit log** – để:
-
-* Truy vết thay đổi
-* Kiểm soát rủi ro
-* Debug & kiểm toán
+👉 **E-commerce lớn bắt buộc phải có**
 
 ---
 
-## 公众号
+## 🧠 Tổng kết Head First (đọc chậm)
 
-![公众号图片](http://macro-oss.oss-cn-shenzhen.aliyuncs.com/mall/banner/qrcode_for_macrozheng_258.jpg)
+> Nếu bạn nhớ được 3 câu này là đã thắng 70% rồi:
 
----
+1️⃣ `pms_product` = **thông tin chung (SPU)**
+2️⃣ `pms_sku_stock` = **thứ user thực sự mua**
+3️⃣ Review, duyệt, log = **bảo vệ hệ thống khi scale**
