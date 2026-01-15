@@ -1,14 +1,39 @@
-学习不走弯路，[关注公众号](#公众号) 回复「学习路线」，获取mall项目专属学习路线！
+Học tập **không đi đường vòng** 🧭
+👉 [Theo dõi公众号](#公众号) và **trả lời “学习路线”** để nhận **lộ trình học riêng cho dự án mall**!
 
-# 营销模块数据库表解析（三）
+---
 
-> 本文主要对首页内容推荐功能相关表进行解析，采用数据库表与功能对照的形式。
+# Phân tích bảng cơ sở dữ liệu của module Marketing (Phần 3)
 
-## 相关表结构
+> Bài viết này tập trung phân tích **chức năng đề xuất nội dung trang chủ**,
+> trình bày theo cách:
+>
+> 👉 **Khối nội dung trang chủ ↔ Bảng dữ liệu ↔ Cách hệ thống sử dụng**
 
-### 首页品牌推荐表
+🧠 **Head First mindset**
+Trang chủ **không phải code cứng** ❌
+Trang chủ là **kết quả của cấu hình dữ liệu + logic hiển thị** ✅
 
-> 用于管理首页显示的品牌制造商直供信息。
+---
+
+## Bức tranh tổng thể: Trang chủ được “lắp ráp” thế nào?
+
+Hãy tưởng tượng homepage mobile 👇
+
+1️⃣ Banner (quảng cáo, sự kiện)
+2️⃣ Hãng sản xuất trực tiếp
+3️⃣ Sản phẩm mới
+4️⃣ Sản phẩm hot
+5️⃣ Chủ đề nổi bật
+
+👉 Mỗi block = **1 bảng riêng**
+👉 Admin bật / tắt / sắp xếp = **không cần deploy code**
+
+---
+
+## 1️⃣ Bảng thương hiệu đề xuất – `sms_home_brand`
+
+> Quản lý **khu vực “Brand Manufacturer Direct”** trên trang chủ
 
 ```sql
 create table sms_home_brand
@@ -16,31 +41,79 @@ create table sms_home_brand
    id                   bigint not null auto_increment,
    brand_id             bigint comment '商品品牌id',
    brand_name           varchar(64) comment '商品品牌名称',
-   recommend_status     int(1) comment '推荐状态：0->不推荐;1->推荐',
+   recommend_status     int(1) comment '推荐状态',
    sort                 int comment '排序',
    primary key (id)
 );
 ```
 
-### 新品推荐商品表
+### 🧠 Head First: bảng này đại diện cho điều gì?
 
-> 用于管理首页显示的新鲜好物信息。
+👉 **Danh sách brand được chọn lọc để show ở homepage**,
+KHÔNG phải toàn bộ brand trong hệ thống.
+
+### Ví dụ dữ liệu
+
+| brand   | recommend_status | sort |
+| ------- | ---------------- | ---- |
+| Apple   | 1                | 1    |
+| Samsung | 1                | 2    |
+| Xiaomi  | 0                | 0    |
+
+👉 Frontend chỉ query:
+
+```sql
+where recommend_status = 1
+order by sort
+```
+
+🧠 **Tư duy marketing**:
+Brand ở đây = **uy tín + bảo chứng chất lượng**
+
+---
+
+## 2️⃣ Bảng sản phẩm mới – `sms_home_new_product`
+
+> Quản lý block **“新鲜好物 – Sản phẩm mới”**
 
 ```sql
 create table sms_home_new_product
 (
    id                   bigint not null auto_increment,
-   product_id           bigint comment '商品id',
-   product_name         varchar(64) comment '商品名称',
-   recommend_status     int(1) comment '推荐状态：0->不推荐;1->推荐',
-   sort                 int(1) comment '排序',
+   product_id           bigint,
+   product_name         varchar(64),
+   recommend_status     int(1),
+   sort                 int(1),
    primary key (id)
 );
 ```
 
-### 人气推荐商品表
+### 🧠 Head First: tại sao không dùng `create_time`?
 
-> 用于管理首页显示的人气推荐信息。
+Vì:
+
+* Không phải sản phẩm mới nào cũng muốn show
+* Marketing muốn **chủ động chọn**
+
+### Ví dụ
+
+| product   | recommend_status |
+| --------- | ---------------- |
+| iPhone 15 | 1                |
+| iPhone 14 | 0                |
+
+👉 Backend:
+
+```text
+Homepage != danh sách mới nhất
+Homepage = danh sách được CHỌN
+```
+
+---
+
+## 3️⃣ Bảng sản phẩm hot – `sms_home_recommend_product`
+
+> Quản lý block **“人气推荐 – Sản phẩm được yêu thích”**
 
 ```sql
 create table sms_home_recommend_product
@@ -54,90 +127,193 @@ create table sms_home_recommend_product
 );
 ```
 
-### 首页专题推荐表
+### 🧠 Head First: “hot” không nhất thiết là bán nhiều
 
-> 用于管理首页显示的专题精选信息。
+👉 “Hot” có thể là:
+
+* Bán chạy
+* Được marketing đẩy
+* Có lợi nhuận cao
+
+🧠 Vì vậy:
+
+> **KHÔNG tính tự động bằng sale_count**
+
+---
+
+### Ví dụ
+
+| product     | lý do         |
+| ----------- | ------------- |
+| AirPods Pro | lợi nhuận cao |
+| iPhone SE   | dễ bán        |
+
+👉 Marketing quyết định, DB chỉ lưu **kết quả chọn**
+
+---
+
+## 4️⃣ Bảng专题精选 – `sms_home_recommend_subject`
+
+> Quản lý block **“专题精选 – Chủ đề đặc biệt”**
 
 ```sql
 create table sms_home_recommend_subject
 (
    id                   bigint not null auto_increment,
-   subject_id           bigint comment '专题id',
-   subject_name         varchar(64) comment '专题名称',
-   recommend_status     int(1) comment '推荐状态：0->不推荐;1->推荐',
-   sort                 int comment '排序',
+   subject_id           bigint,
+   subject_name         varchar(64),
+   recommend_status     int(1),
+   sort                 int,
    primary key (id)
 );
 ```
 
-### 首页轮播广告表
+### 🧠 Head First: Subject là gì?
 
-> 用于管理首页显示的轮播广告信息。
+👉 Subject = **landing page theo chủ đề**
+
+Ví dụ:
+
+* “Top đồ công nghệ cho dân IT”
+* “Back to school”
+* “Apple week”
+
+🧠 Khi user click:
+
+```text
+Homepage → Subject page → Product list
+```
+
+---
+
+## 5️⃣ Bảng quảng cáo banner – `sms_home_advertise`
+
+> Quản lý **banner / carousel** trên homepage
 
 ```sql
 create table sms_home_advertise
 (
    id                   bigint not null auto_increment,
-   name                 varchar(100) comment '名称',
-   type                 int(1) comment '轮播位置：0->PC首页轮播；1->app首页轮播',
-   pic                  varchar(500) comment '图片地址',
-   start_time           datetime comment '开始时间',
-   end_time             datetime comment '结束时间',
-   status               int(1) comment '上下线状态：0->下线；1->上线',
-   click_count          int comment '点击数',
-   order_count          int comment '下单数',
-   url                  varchar(500) comment '链接地址',
-   note                 varchar(500) comment '备注',
-   sort                 int default 0 comment '排序',
+   name                 varchar(100),
+   type                 int(1),
+   pic                  varchar(500),
+   start_time           datetime,
+   end_time             datetime,
+   status               int(1),
+   click_count          int,
+   order_count          int,
+   url                  varchar(500),
+   note                 varchar(500),
+   sort                 int default 0,
    primary key (id)
 );
 ```
 
+---
 
-## 管理端展现
+### 🧠 Head First: bảng này KHÔNG chỉ để hiển thị
 
-### 品牌推荐列表
+👉 Nó còn dùng để:
+
+* Đếm click
+* Đếm đơn hàng
+* Đánh giá hiệu quả chiến dịch
+
+---
+
+### Ví dụ banner Flash Sale
+
+| field      | ví dụ            |
+| ---------- | ---------------- |
+| name       | Flash Sale 9.9   |
+| type       | 1 (app)          |
+| start_time | 2024-09-09 00:00 |
+| end_time   | 2024-09-09 23:59 |
+| url        | /flash-sale      |
+
+🧠 Khi user click:
+
+```text
+click_count++
+```
+
+Khi order thành công từ link:
+
+```text
+order_count++
+```
+
+👉 **Marketing đo ROI ngay trong DB**
+
+---
+
+## Quản trị phía Admin (hiểu luồng)
+
+### Quản lý brand
+
 ![](../images/database_screen_93.png)
-
-### 选择品牌
 ![](../images/database_screen_94.png)
 
-### 新品推荐列表
-![](../images/database_screen_95.png)
+### Quản lý sản phẩm mới
 
-### 选择商品
+![](../images/database_screen_95.png)
 ![](../images/database_screen_96.png)
 
-### 人气推荐列表
-![](../images/database_screen_97.png)
+### Quản lý sản phẩm hot
 
-### 选择商品
+![](../images/database_screen_97.png)
 ![](../images/database_screen_98.png)
 
-### 专题推荐列表
-![](../images/database_screen_99.png)
+### Quản lý chủ đề
 
-### 选择专题
+![](../images/database_screen_99.png)
 ![](../images/database_screen_100.png)
 
-### 广告列表
-![](../images/database_screen_101.png)
+### Quản lý banner
 
-### 编辑广告
+![](../images/database_screen_101.png)
 ![](../images/database_screen_102.png)
 
-## 移动端展现
+---
 
-### 首页轮播广告
+## Mobile – kết quả cuối cùng
+
+### Banner
+
 ![](../images/database_screen_103.png)
-### 品牌制造商直供
+
+### Brand trực tiếp
+
 ![](../images/database_screen_104.png)
-### 新鲜好物
+
+### Sản phẩm mới
+
 ![](../images/database_screen_105.png)
-### 人气推荐
+
+### Sản phẩm hot
+
 ![](../images/database_screen_106.png)
-### 专题精选
+
+### Chủ đề精选
+
 ![](../images/database_screen_107.png)
+
+---
+
+## 🧠 Tổng kết Head First (cực kỳ quan trọng)
+
+> Trang chủ **KHÔNG phải dữ liệu động phức tạp**,
+> mà là **tập hợp các danh sách được marketing chọn trước**.
+
+### Ghi nhớ 5 dòng này 👇
+
+1️⃣ Homepage = **nhiều block độc lập**
+2️⃣ Mỗi block = **1 bảng riêng**
+3️⃣ `recommend_status` = công tắc bật/tắt
+4️⃣ `sort` = quyền kiểm soát hiển thị
+5️⃣ Backend chỉ **assemble dữ liệu**, frontend chỉ render
+
+---
 
 ## 公众号
 
