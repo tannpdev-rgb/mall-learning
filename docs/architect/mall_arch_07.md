@@ -1,345 +1,291 @@
-Học tập **không đi đường vòng** 🚀
+Học tập **không đi đường vòng** 🧭
 👉 [Theo dõi公众号](#公众号) và **trả lời “学习路线”** để nhận **lộ trình học riêng cho dự án mall**!
 
 ---
 
-# mall tích hợp Elasticsearch để thực hiện tìm kiếm sản phẩm
+# mall tích hợp Elasticsearch – Hiểu đúng ngay từ đầu (Head First Style)
 
-> Bài viết này sẽ dẫn bạn từng bước **tích hợp Elasticsearch vào dự án mall**, với mục tiêu:
-> 👉 **import – truy vấn – cập nhật – xoá** thông tin sản phẩm trong Elasticsearch.
+> Nếu MySQL giỏi **lưu trữ & giao dịch**
+> thì Elasticsearch giỏi **tìm kiếm & phân tích text**
 
-Hãy tưởng tượng thế này 🧠:
-👉 **MySQL** lo lưu trữ dữ liệu
-👉 **Elasticsearch** lo **tìm kiếm siêu nhanh**
-👉 **mall** kết hợp cả hai để tạo trải nghiệm tìm sản phẩm “nhanh như chớp ⚡”
+👉 mall **KHÔNG dùng Elasticsearch thay MySQL**
+👉 mà dùng nó như **một SEARCH ENGINE chuyên nghiệp**
 
 ---
 
-## Giới thiệu framework được sử dụng trong dự án
+## 🧠 Bức tranh tổng thể (rất quan trọng)
 
-### Elasticsearch
-
-> **Elasticsearch** là một công cụ **tìm kiếm và phân tích dữ liệu**:
-
-* Phân tán (distributed)
-* Có thể mở rộng (scalable)
-* Thời gian thực (real-time)
-
-Ngay từ khi dự án bắt đầu, Elasticsearch đã cho phép bạn:
-
-* 🔍 Tìm kiếm toàn văn (full-text search)
-* 📊 Thống kê dữ liệu theo thời gian thực
-
----
-
-### Cài đặt và sử dụng Elasticsearch
-
-#### Bước 1: Tải Elasticsearch
-
-* Tải **Elasticsearch 6.2.2 (zip)** và giải nén
-* Link tải:
-  [https://www.elastic.co/cn/downloads/past-releases/elasticsearch-6-2-2](https://www.elastic.co/cn/downloads/past-releases/elasticsearch-6-2-2)
-
-![](../images/arch_screen_25.png)
-
----
-
-#### Bước 2: Cài plugin phân tích tiếng Trung (IK)
-
-Trong thư mục `elasticsearch-6.2.2/bin`, chạy lệnh:
-
-```bash
-elasticsearch-plugin install https://github.com/medcl/elasticsearch-analysis-ik/releases/download/v6.2.2/elasticsearch-analysis-ik-6.2.2.zip
-```
-
-👉 Plugin này giúp Elasticsearch **tách từ tiếng Trung** (giống như tokenizer cho tiếng Việt/Anh).
-
-![](../images/arch_screen_26.png)
-
----
-
-#### Bước 3: Khởi động Elasticsearch
-
-Chạy file:
-
-```text
-bin/elasticsearch.bat
-```
-
-![](../images/arch_screen_27.png)
-
----
-
-#### Bước 4: Cài Kibana (giao diện quản lý ES)
-
-* Tải **Kibana 6.2.2**
-* Link tải:
-  [https://artifacts.elastic.co/downloads/kibana/kibana-6.2.2-windows-x86_64.zip](https://artifacts.elastic.co/downloads/kibana/kibana-6.2.2-windows-x86_64.zip)
-
-![](../images/arch_screen_28.png)
-
----
-
-#### Bước 5: Khởi động Kibana
-
-Chạy:
-
-```text
-bin/kibana.bat
-```
-
-![](../images/arch_screen_29.png)
-
----
-
-#### Bước 6: Truy cập giao diện Kibana
-
-Mở trình duyệt và truy cập:
+Trước khi xem code, hãy nhìn **luồng dữ liệu**:
 
 ```
-http://localhost:5601
+MySQL (pms_product, pms_product_attribute, ...)
+        |
+        |  (import / sync)
+        v
+Elasticsearch (EsProduct index)
+        |
+        |  (search)
+        v
+Frontend / Mobile
 ```
 
-![](../images/arch_screen_30.png)
-
-🎉 Chúc mừng! Bạn đã có **bảng điều khiển Elasticsearch**.
-
----
-
-## Spring Data Elasticsearch
-
-> **Spring Data Elasticsearch** cho phép bạn thao tác Elasticsearch theo phong cách **Spring Data quen thuộc**, giúp:
-
-* Giảm code lặp
-* Không cần viết nhiều boilerplate
-* Code gọn – dễ đọc – dễ bảo trì
+👉 **MySQL là nguồn dữ liệu gốc (Source of Truth)**
+👉 **Elasticsearch chỉ là bản sao phục vụ tìm kiếm**
 
 ---
 
-### Các annotation thường dùng
+## 1️⃣ Vì sao mall cần Elasticsearch?
 
-#### `@Document`
+Nếu chỉ dùng MySQL:
 
-👉 Tương đương **database + table** trong MySQL
+```sql
+LIKE '%iphone%'
+```
+
+❌ chậm
+❌ không phân tích tiếng Trung
+❌ không scoring (độ liên quan)
+
+Elasticsearch thì:
+
+* ✅ full-text search
+* ✅ phân词 (IK Analyzer)
+* ✅ relevance score
+* ✅ filter + sort + aggregation
+
+👉 **Search là thế mạnh tuyệt đối của ES**
+
+---
+
+## 2️⃣ Spring Data Elasticsearch – vì sao dùng?
+
+🧠 Head First so sánh:
+
+| Cách               | Đặc điểm                      |
+| ------------------ | ----------------------------- |
+| REST thuần         | Phải tự viết DSL JSON         |
+| Transport Client   | API dài, phức tạp             |
+| **Spring Data ES** | ✔ giống JPA, ✔ ít boilerplate |
+
+👉 mall chọn **Spring Data Elasticsearch** để:
+
+* code gọn
+* dễ đọc
+* dễ học
+
+---
+
+## 3️⃣ Tư duy thiết kế Document (EsProduct)
+
+### ❓ Vì sao không dùng pms_product trực tiếp?
+
+🧠 Vì **Search cần dữ liệu khác Transaction**
+
+Ví dụ:
+
+* MySQL: normalize (chuẩn hóa)
+* ES: denormalize (phi chuẩn hóa)
+
+👉 **EsProduct là một VIEW MODEL cho tìm kiếm**
+
+---
+
+### 🧩 EsProduct = “Sản phẩm để search”
 
 ```java
-@Document(
-  indexName = "pms", // giống database
-  type = "product", // giống table
-  shards = 1,
-  replicas = 0
-)
-```
-
----
-
-#### `@Id`
-
-👉 Chính là **primary key** của document
-
-```java
-@Id
-private Long id;
-```
-
----
-
-#### `@Field`
-
-👉 Dùng để cấu hình **kiểu dữ liệu & cách lập chỉ mục**
-
-```java
-@Field(
-  type = FieldType.Text,
-  analyzer = "ik_max_word"
-)
-```
-
----
-
-#### `FieldType`
-
-Một số kiểu thường dùng:
-
-* `Text` → có phân từ + lập index
-* `Keyword` → **không phân từ**
-* `Nested` → object lồng nhau
-* `Auto` → ES tự đoán kiểu
-
----
-
-## Thao tác dữ liệu với Spring Data Elasticsearch
-
-### 1️⃣ Kế thừa `ElasticsearchRepository`
-
-👉 Tự động có:
-
-* save
-* delete
-* findById
-* search
-
-![](../images/arch_screen_31.png)
-
----
-
-### 2️⃣ Derive Query – viết query bằng… tên hàm 😲
-
-```java
-Page<EsProduct> findByNameOrSubTitleOrKeywords(
-    String name,
-    String subTitle,
-    String keywords,
-    Pageable page
-);
-```
-
-👉 Không cần SQL
-👉 Không cần DSL
-👉 Spring tự hiểu!
-
-IDEA còn **auto suggest field** cho bạn nữa 👇
-
-![](../images/arch_screen_32.png)
-
----
-
-### 3️⃣ Dùng `@Query` để viết DSL
-
-```java
-@Query("{"bool":{"must":{"field":{"name":"?0"}}}}")
-Page<EsProduct> findByName(String name, Pageable pageable);
-```
-
-👉 Khi cần **query phức tạp**, dùng cách này.
-
----
-
-## Các bảng dữ liệu trong dự án
-
-* `pms_product` – thông tin sản phẩm
-* `pms_product_attribute` – thuộc tính sản phẩm
-* `pms_product_attribute_value` – giá trị thuộc tính
-
----
-
-## Tích hợp Elasticsearch để tìm kiếm sản phẩm
-
-### Thêm dependency vào `pom.xml`
-
-```xml
-<dependency>
-  <groupId>org.springframework.boot</groupId>
-  <artifactId>spring-boot-starter-data-elasticsearch</artifactId>
-</dependency>
-```
-
----
-
-### Cấu hình `application.yml`
-
-```yml
-data:
-  elasticsearch:
-    repositories:
-      enabled: true
-    cluster-nodes: 127.0.0.1:9300
-    cluster-name: elasticsearch
-```
-
----
-
-### Tạo document `EsProduct`
-
-💡 **Quy tắc vàng**:
-
-* Không cần phân từ → `Keyword`
-* Cần tìm kiếm → `Text + ik_max_word`
-
-```java
-@Document(indexName = "pms", type = "product", shards = 1, replicas = 0)
-public class EsProduct implements Serializable {
+@Document(indexName = "pms", type = "product")
+public class EsProduct {
     @Id
     private Long id;
-
-    @Field(type = FieldType.Keyword)
-    private String productSn;
-
-    @Field(analyzer = "ik_max_word", type = FieldType.Text)
-    private String name;
-
-    @Field(type = FieldType.Nested)
-    private List<EsProductAttributeValue> attrValueList;
-}
 ```
+
+🧠 Mapping trong đầu bạn:
+
+| MySQL    | Elasticsearch |
+| -------- | ------------- |
+| database | index         |
+| table    | type          |
+| row      | document      |
+| column   | field         |
 
 ---
 
-### Repository thao tác Elasticsearch
+### 🔑 Keyword vs Text (rất hay bị nhầm)
 
 ```java
-public interface EsProductRepository
-  extends ElasticsearchRepository<EsProduct, Long> {
-
-  Page<EsProduct> findByNameOrSubTitleOrKeywords(
-      String name,
-      String subTitle,
-      String keywords,
-      Pageable page
-  );
-}
+@Field(type = FieldType.Keyword)
+private String brandName;
 ```
 
----
+👉 `Keyword`:
 
-### Service & ServiceImpl
+* không phân词
+* dùng cho filter / exact match
 
-👉 Chịu trách nhiệm:
+```java
+@Field(analyzer = "ik_max_word", type = FieldType.Text)
+private String name;
+```
 
-* Import dữ liệu
-* Search
-* Create / Delete sản phẩm trong ES
+👉 `Text`:
 
-(code giữ nguyên như bản gốc)
+* có phân词
+* dùng cho full-text search
 
----
+🧠 **Quy tắc nhớ nhanh**:
 
-### Controller – định nghĩa API
-
-👉 Các API:
-
-* Import toàn bộ dữ liệu
-* Xoá theo ID
-* Xoá batch
-* Tạo sản phẩm
-* Tìm kiếm đơn giản
-
-(code giữ nguyên)
+> ID, mã, tên hãng → `Keyword`
+> Tên sản phẩm, mô tả → `Text + analyzer`
 
 ---
 
-## Test API
+### 🧠 attrValueList dùng Nested – vì sao?
 
-### Import dữ liệu vào Elasticsearch
+```java
+@Field(type = FieldType.Nested)
+private List<EsProductAttributeValue> attrValueList;
+```
 
-![](../images/arch_screen_33.png)
-![](../images/arch_screen_34.png)
+👉 Vì:
 
----
+* mỗi sản phẩm có nhiều thuộc tính
+* mỗi thuộc tính có key + value
 
-### Tìm kiếm sản phẩm
+Nested giúp:
 
-![](../images/arch_screen_35.png)
-![](../images/arch_screen_36.png)
-
----
-
-## Mã nguồn dự án
-
-👉 [https://github.com/macrozheng/mall-learning/tree/master/mall-tiny-06](https://github.com/macrozheng/mall-learning/tree/master/mall-tiny-06)
+* search chính xác theo cặp key–value
+* tránh sai logic khi filter
 
 ---
 
-## 公众号
+## 4️⃣ Repository – Search không cần viết SQL
 
-![公众号图片](http://macro-oss.oss-cn-shenzhen.aliyuncs.com/mall/banner/qrcode_for_macrozheng_258.jpg)
+```java
+Page<EsProduct> findByNameOrSubTitleOrKeywords(...)
+```
+
+🧠 Head First giải thích:
+
+* Spring **đọc tên method**
+* → tự sinh DSL Elasticsearch
+* → không cần implement
+
+👉 **Giống JPA**, nhưng chạy trên ES.
+
+---
+
+## 5️⃣ Service – tách rõ trách nhiệm
+
+### 1️⃣ importAll()
+
+```java
+productDao.getAllEsProductList(null);
+productRepository.saveAll(...)
+```
+
+🧠 Ý nghĩa:
+
+* Lấy dữ liệu từ MySQL
+* Build EsProduct
+* Đẩy sang ES
+
+👉 Thường dùng khi:
+
+* lần đầu chạy hệ thống
+* rebuild index
+
+---
+
+### 2️⃣ create(id)
+
+👉 Khi admin **tạo / update sản phẩm**
+
+Flow:
+
+```
+MySQL save
+→ build EsProduct
+→ save vào ES
+```
+
+👉 Đảm bảo **search data luôn mới**
+
+---
+
+### 3️⃣ delete(id / ids)
+
+👉 Khi sản phẩm bị xóa / off sale
+→ phải xóa khỏi ES
+→ tránh search ra “hàng ma”
+
+---
+
+### 4️⃣ search(keyword)
+
+```java
+findByNameOrSubTitleOrKeywords(keyword, keyword, keyword)
+```
+
+🧠 Đây là:
+
+* **simple search**
+* demo cho người mới
+
+👉 Sau này có thể mở rộng:
+
+* filter theo brand
+* filter theo price
+* sort theo sale / score
+
+---
+
+## 6️⃣ Controller – API rất “đúng vai”
+
+Controller **KHÔNG biết ES hoạt động thế nào**
+
+Nó chỉ:
+
+* gọi service
+* trả CommonResult
+
+👉 Kiến trúc **rất sạch**
+
+---
+
+## 7️⃣ Test – thứ tự bắt buộc
+
+🧠 Rất nhiều người test sai thứ tự:
+
+❌ search trước khi import
+→ ES rỗng → không có kết quả
+
+### Đúng thứ tự:
+
+1️⃣ `/importAll`
+2️⃣ `/search/simple?keyword=xxx`
+
+👉 Kết quả mới đúng
+
+---
+
+## 8️⃣ Tổng kết Head First (phần này cực quan trọng)
+
+### 🎯 mall dùng Elasticsearch đúng chỗ
+
+* ❌ không thay MySQL
+* ✅ chỉ phục vụ search
+
+---
+
+### 🎯 Kiến trúc chuẩn enterprise
+
+* MySQL → source of truth
+* ES → read model
+* Service → đồng bộ dữ liệu
+
+---
+
+### 🎯 Tư duy bạn cần nhớ
+
+> **Elasticsearch không khó**
+> Cái khó là **biết dùng nó ở đâu, và dùng tới mức nào**
