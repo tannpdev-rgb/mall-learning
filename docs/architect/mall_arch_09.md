@@ -1,269 +1,288 @@
-## 📚 Học tập không đi đường vòng
-
-👉 **[Theo dõi公众号](#公众号)** và **trả lời “学习路线”** để nhận **lộ trình học RIÊNG cho dự án mall**!
+学习不走弯路，[关注公众号](#公众号) 回复「学习路线」，获取mall项目专属学习路线！
 
 ---
 
-# ⏰ Dự án mall: Tích hợp RabbitMQ để xử lý **delay message (tin nhắn trễ)**
+# mall tích hợp RabbitMQ để triển khai **Delayed Message (消息延迟)**
 
-> Bài viết này sẽ **dẫn bạn từng bước** tích hợp **RabbitMQ vào dự án mall**
-> để giải quyết một bài toán kinh điển trong e-commerce:
+> Bài viết này hướng dẫn cách **mall tích hợp RabbitMQ để xử lý message delay**,
+> ví dụ điển hình: **tự động hủy đơn hàng khi quá thời gian thanh toán**.
+
+---
+
+## 🧠 Tư duy Head First – Vấn đề thật sự là gì?
+
+👉 Khi người dùng **đặt hàng nhưng không thanh toán**, hệ thống phải:
+
+* Không hủy ngay ❌
+* Không chờ user bấm nút ❌
+* **Tự động xử lý sau X phút** ✅
+
+💡 Vấn đề cốt lõi:
+
+> ❓ Làm sao “hẹn giờ” một hành động trong hệ thống phân tán?
+
+Câu trả lời của mall:
+👉 **RabbitMQ + Dead Letter Queue (TTL)**
+
+---
+
+## Giới thiệu framework sử dụng
+
+---
+
+## 🐰 RabbitMQ là gì?
+
+> RabbitMQ là một **message broker mã nguồn mở**, được sử dụng rộng rãi.
 >
-> 👉 **Đơn hàng quá hạn thanh toán thì tự động bị hủy**
-
-💡 Head First nói thẳng:
-
-> *Delay message = không phải chờ, không phải cron, không phải polling.*
-
----
-
-## 🧩 1. RabbitMQ là gì?
-
-> **RabbitMQ** là một **message queue (hàng đợi tin nhắn)** mã nguồn mở,
-> được dùng để:
+> Nó nhẹ, dễ triển khai, hỗ trợ nhiều protocol và cực kỳ phù hợp cho:
 >
-> * Tách producer & consumer
-> * Xử lý bất đồng bộ
-> * Chịu tải cao
-> * Đảm bảo message không bị mất
-
-👉 Trong mall:
-
-> *Đặt hàng* ≠ *Hủy đơn*
-> → Hai việc này **không nên chạy cùng lúc**
+> * hệ thống phân tán
+> * xử lý bất đồng bộ
+> * retry / delay / event-driven
 
 ---
 
-## ⚙️ 2. Cài đặt RabbitMQ (Windows)
+## Cài đặt RabbitMQ (Windows)
 
-### 🧱 Bước 1: Cài Erlang (bắt buộc)
+### 1️⃣ Cài Erlang (RabbitMQ chạy trên Erlang)
 
-🔗 Link tải:
+Link tải:
 [http://erlang.org/download/otp_win64_21.3.exe](http://erlang.org/download/otp_win64_21.3.exe)
 
-![Image](https://www.rose-hulman.edu/class/csse/resources/Erlang/ErlPrompt.png)
-
-![Image](https://www.tutorialspoint.com/erlang/images/select_components.jpg)
-
-💡 Head First nhớ:
-
-> *Không có Erlang → RabbitMQ không chạy được*
+![](../images/arch_screen_53.png)
 
 ---
 
-### 🐰 Bước 2: Cài RabbitMQ
+### 2️⃣ Cài RabbitMQ
 
-🔗 Link tải (v3.7.14):
+Link tải:
 [https://dl.bintray.com/rabbitmq/all/rabbitmq-server/3.7.14/rabbitmq-server-3.7.14.exe](https://dl.bintray.com/rabbitmq/all/rabbitmq-server/3.7.14/rabbitmq-server-3.7.14.exe)
 
-![Image](https://raw.github.com/mythz/rabbitmq-windows/master/img/rabbitmq-management-ui.png)
-
-![Image](https://raw.github.com/mythz/rabbitmq-windows/master/img/rabbitmq-service.png)
+![](../images/arch_screen_54.png)
 
 ---
 
-### 🧰 Bước 3: Bật giao diện quản lý (Management Plugin)
+### 3️⃣ Vào thư mục `sbin` của RabbitMQ
 
-Vào thư mục `sbin` → mở CMD → chạy:
+![](../images/arch_screen_55.png)
+
+---
+
+### 4️⃣ Bật giao diện quản lý
 
 ```bash
 rabbitmq-plugins enable rabbitmq_management
 ```
 
-![Image](https://coderjony.com/img/blogs/how-to-enable-rabbitmq-management-plugin-in-windows/rabbitmq-user-interface-2.png)
-
-![Image](https://static.thegeekstuff.com/wp-content/uploads/2013/10/rabbitmq-set-current-permission.png)
-
-Truy cập:
-
-```
-http://localhost:15672
-```
-
-Tài khoản mặc định:
-
-```
-guest / guest
-```
-
-![Image](https://www.cloudamqp.com/img/blog/management-overview.png)
-
-![Image](https://www.rabbitmq.com/assets/images/management-oauth-with-basic-auth-3711e59ce457ceb2900716d53e5cd731.png)
+![](../images/arch_screen_56.png)
 
 ---
 
-### 👤 Bước 4: Tạo user & virtual host
+### 5️⃣ Truy cập giao diện quản lý
 
-* User: `mall / mall`
-* Role: **administrator**
-* Virtual host: `/mall`
-* Gán quyền cho user `mall`
+[http://localhost:15672/](http://localhost:15672/)
 
-![Image](https://www.cloudamqp.com/img/blog/vhost-rabbitmq-management.png)
-
-![Image](https://www.tutlane.com/images/rabbitmq/rabbitmq_management_set_user_permissions.PNG)
-
-👉 Đến đây: **RabbitMQ sẵn sàng chiến đấu** 💪
+![](../images/arch_screen_57.png)
 
 ---
 
-## 🧠 3. Mô hình message trong RabbitMQ
+### 6️⃣ Đăng nhập mặc định
 
-![Image](https://www.rabbitmq.com/assets/images/hello-world-example-routing-cbe9a872b37956a4072a5e13f9d76e7b.png)
-
-![Image](https://www.cloudamqp.com/img/blog/exchanges-topic-fanout-direct.png)
-
-| Ký hiệu | Tên      | Ý nghĩa                   |
-| ------- | -------- | ------------------------- |
-| P       | Producer | Gửi message               |
-| X       | Exchange | Nhận & định tuyến message |
-| Q       | Queue    | Lưu message               |
-| C       | Consumer | Xử lý message             |
-
-💡 Head First nhớ:
-
-> *Producer không gửi thẳng vào Queue → phải qua Exchange*
+* username: `guest`
+* password: `guest`
 
 ---
 
-## 🎯 4. Bài toán nghiệp vụ: Hủy đơn hàng quá hạn
+### 7️⃣ Tạo user mới: `mall / mall` (admin)
 
-### Luồng nghiệp vụ chuẩn e-commerce
+![](../images/arch_screen_58.png)
 
-1. Người dùng **đặt hàng**
+---
+
+### 8️⃣ Tạo Virtual Host `/mall`
+
+![](../images/arch_screen_59.png)
+
+---
+
+### 9️⃣ Gán quyền cho user mall
+
+![](../images/arch_screen_60.png)
+
+![](../images/arch_screen_61.png)
+
+✅ **Hoàn tất cấu hình RabbitMQ**
+
+---
+
+## 🧩 Mô hình message của RabbitMQ
+
+![](../images/arch_screen_52.png)
+
+| Ký hiệu | Tên           | Tiếng Anh     | Mô tả                     |
+| ------- | ------------- | ------------- | ------------------------- |
+| P       | Producer      | Người gửi     | Gửi message               |
+| X       | Exchange      | Bộ định tuyến | Quyết định message đi đâu |
+| Q       | Queue         | Hàng đợi      | Lưu message               |
+| C       | Consumer      | Người nhận    | Xử lý message             |
+| type    | Loại exchange | direct        | match theo routing key    |
+
+🧠 **Head First ghi nhớ**:
+
+> Producer **KHÔNG gửi thẳng** vào Queue
+> 👉 Luôn gửi qua **Exchange**
+
+---
+
+## Lombok là gì?
+
+> Lombok giúp bạn **khỏi viết getter / setter / constructor**.
+
+📌 Chỉ cần:
+
+* cài plugin Lombok trong IDEA
+* thêm dependency
+
+![](../images/arch_screen_48.png)
+
+---
+
+## 🎯 Bối cảnh nghiệp vụ (Business Scenario)
+
+### Vấn đề: Đơn hàng quá hạn thanh toán
+
+Luồng thực tế:
+
+1. User đặt hàng
 2. Hệ thống:
 
-   * Khóa tồn kho
-   * Áp voucher
-   * Tạo orderId
-3. Nếu **60 phút không thanh toán**
-4. 👉 **Tự động hủy đơn**
+   * khóa tồn kho
+   * áp dụng coupon
+   * trừ điểm
+3. Tạo orderId
+4. Nếu **sau 60 phút chưa thanh toán**:
 
-   * Trả tồn kho
-   * Trả voucher
-   * Hoàn điểm
+   * hủy đơn
+   * trả tồn kho
+   * trả coupon
+   * trả điểm
 
-💡 Câu hỏi lớn:
+❓ Làm sao biết “60 phút sau” để xử lý?
 
-> *Ai sẽ nhớ để hủy đơn sau 60 phút?*
-
-👉 **RabbitMQ Delay Message trả lời câu hỏi đó.**
-
----
-
-## 🧱 5. Ý tưởng Delay Message với RabbitMQ
-
-> RabbitMQ **không có delay queue “xịn” mặc định**,
-> nên ta dùng:
->
-> 👉 **TTL + Dead Letter Queue**
-
-### Luồng tư duy Head First
-
-```
-Đặt hàng
-  ↓
-Gửi message vào queue TTL (có thời gian sống)
-  ↓ (hết TTL)
-Message tự động chuyển sang queue thật
-  ↓
-Consumer xử lý → HỦY ĐƠN
-```
+👉 **Delayed Message**
 
 ---
 
-## 📦 6. Thêm dependency
+## 🚀 Tích hợp RabbitMQ để xử lý Delayed Message
+
+---
+
+## 1️⃣ Thêm dependency
 
 ```xml
 <!-- RabbitMQ -->
 <dependency>
-  <groupId>org.springframework.boot</groupId>
-  <artifactId>spring-boot-starter-amqp</artifactId>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-amqp</artifactId>
 </dependency>
 
 <!-- Lombok -->
 <dependency>
-  <groupId>org.projectlombok</groupId>
-  <artifactId>lombok</artifactId>
+    <groupId>org.projectlombok</groupId>
+    <artifactId>lombok</artifactId>
 </dependency>
 ```
 
 ---
 
-## ⚙️ 7. Cấu hình RabbitMQ
+## 2️⃣ Cấu hình RabbitMQ
 
 ```yml
-spring:
-  rabbitmq:
-    host: localhost
-    port: 5672
-    virtual-host: /mall
-    username: mall
-    password: mall
-    publisher-confirms: true
+rabbitmq:
+  host: localhost
+  port: 5672
+  virtual-host: /mall
+  username: mall
+  password: mall
+  publisher-confirms: true
 ```
 
 ---
 
-## 🧠 8. QueueEnum – gom toàn bộ cấu hình queue
+## 3️⃣ Enum định nghĩa Queue (rất hay!)
 
-> **Đừng hard-code tên queue** – rất dễ toang 😅
+### 🧠 Head First:
+
+> **Tên exchange, queue, routing key**
+> 👉 không viết hard-code
+> 👉 gom vào enum
 
 ```java
-QUEUE_ORDER_CANCEL(
-  "mall.order.direct",
-  "mall.order.cancel",
-  "mall.order.cancel"
-),
-
-QUEUE_TTL_ORDER_CANCEL(
-  "mall.order.direct.ttl",
-  "mall.order.cancel.ttl",
-  "mall.order.cancel.ttl"
-);
+public enum QueueEnum {
+    QUEUE_ORDER_CANCEL(
+        "mall.order.direct",
+        "mall.order.cancel",
+        "mall.order.cancel"
+    ),
+    QUEUE_TTL_ORDER_CANCEL(
+        "mall.order.direct.ttl",
+        "mall.order.cancel.ttl",
+        "mall.order.cancel.ttl"
+    );
+}
 ```
 
-💡 Head First:
+📌 Có 2 queue:
 
-> *Enum = cấu hình tập trung = dễ maintain*
+* **TTL queue**: chờ hết hạn
+* **Real queue**: xử lý hủy đơn
 
 ---
 
-## 🧱 9. Cấu hình Exchange & Queue
+## 4️⃣ Cấu hình Exchange + Queue + Binding
 
-### Queue TTL (delay queue)
+👉 Điểm mấu chốt:
 
 ```java
 .withArgument("x-dead-letter-exchange", "mall.order.direct")
 .withArgument("x-dead-letter-routing-key", "mall.order.cancel")
 ```
 
-👉 Ý nghĩa:
+🧠 **Giải thích Head First**:
 
-> *Hết hạn → chuyển message sang queue hủy đơn*
+* Message vào `TTL queue`
+* Hết thời gian → trở thành **dead letter**
+* Tự động chuyển sang queue xử lý thật
 
-![Image](https://www.cloudamqp.com/img/blog/dead-letter-exchange.png)
-
-![Image](https://miro.medium.com/1%2A__U3ZU5cIU3IFsrAF6T9SA.png)
+📦 Bạn **KHÔNG cần cron job**
 
 ---
 
-## 📤 10. Producer – gửi delay message
+### Trên giao diện RabbitMQ sẽ thấy
+
+![](../images/arch_screen_62.png)
+![](../images/arch_screen_63.png)
+![](../images/arch_screen_64.png)
+![](../images/arch_screen_65.png)
+
+---
+
+## 5️⃣ Producer – Gửi message delay
 
 ```java
 message.getMessageProperties()
        .setExpiration(String.valueOf(delayTimes));
 ```
 
-👉 `delayTimes` = thời gian chờ (ms)
+🧠 Ví dụ:
 
-💡 Head First:
-
-> *Delay nằm trên MESSAGE, không nằm trên queue*
+* delayTimes = `30_000`
+* message chờ 30 giây
+* sau đó được chuyển sang queue hủy đơn
 
 ---
 
-## 📥 11. Consumer – nhận message hủy đơn
+## 6️⃣ Consumer – Nhận message & hủy đơn
 
 ```java
 @RabbitListener(queues = "mall.order.cancel")
@@ -272,70 +291,68 @@ public void handle(Long orderId) {
 }
 ```
 
-👉 Khi message tới đây:
-
-> **Đơn hàng chắc chắn đã quá hạn**
+📌 Consumer **không quan tâm delay**
+👉 chỉ xử lý khi message tới
 
 ---
 
-## 🧠 12. Gắn delay message vào flow đặt hàng
+## 7️⃣ Service – Nối business với MQ
 
 ```java
-// Sau khi tạo đơn
 sendDelayMessageCancelOrder(orderId);
 ```
 
-```java
-long delayTimes = 30 * 1000; // demo 30s
-cancelOrderSender.sendMessage(orderId, delayTimes);
+🧠 Head First flow:
+
 ```
-
-💡 Head First nhớ:
-
-> *Đặt hàng xong là “quên nó đi” – RabbitMQ sẽ nhớ giúp bạn*
+generateOrder()
+   ↓
+send delay message
+   ↓
+RabbitMQ chờ
+   ↓
+cancelOrder()
+```
 
 ---
 
-## 🧪 13. Test API
+## 8️⃣ Test API
 
-### Gọi API đặt hàng
+⏱ Delay được set: **30 giây**
 
-![Image](https://i.sstatic.net/LjKwg.png)
+![](../images/arch_screen_49.png)
+![](../images/arch_screen_50.png)
+![](../images/arch_screen_51.png)
 
-![Image](https://i.sstatic.net/Y4m7m.png)
-
-⏳ Sau 30 giây…
-
-![Image](https://www.cloudamqp.com/img/blog/delay-message-exchange.png)
-
-![Image](https://user-images.githubusercontent.com/442035/96842403-46ee6d00-144d-11eb-806c-93261c11ca54.png)
-
-👉 Log xuất hiện:
-
-```
-receive delay message orderId=xxx
-process cancelOrder
-```
-
-🎉 Thành công!
+👉 Sau 30s → log hủy đơn xuất hiện
 
 ---
 
-## 📦 Source code dự án
+## 🧠 RECAP – Tổng kết Head First
 
-🔗 GitHub:
-[https://github.com/macrozheng/mall-learning/tree/master/mall-tiny-08](https://github.com/macrozheng/mall-learning/tree/master/mall-tiny-08)
+### 🎯 Bạn vừa học được gì?
+
+✅ RabbitMQ **không chỉ để async**, mà còn dùng delay
+✅ Delay Message = **TTL + Dead Letter Queue**
+✅ Không cần cron job
+✅ Không block thread
+✅ Rất phù hợp hệ thống ecommerce
 
 ---
 
-## 📢 公众号
+### 🎯 Khi nào nên dùng cách này?
 
-![Image](https://opengraph.githubassets.com/0e4358626612706b3d9867e82818afa40c744572ddb56dcd795566d96379e1ae/macrozheng/mall)
+| Tình huống                 | Có nên dùng |
+| -------------------------- | ----------- |
+| Hủy đơn quá hạn            | ✅           |
+| Retry thanh toán           | ✅           |
+| Gửi mail sau X phút        | ✅           |
+| Task cực chính xác theo ms | ❌           |
 
-![Image](https://macro-oss.oss-cn-shenzhen.aliyuncs.com/mall/banner/qrcode_for_macrozheng_258.jpg)
+---
 
-👉 Theo dõi để:
+### 🎯 Câu thần chú cần nhớ
 
-* Hiểu **RabbitMQ sâu hơn Kafka**
-* Xây hệ thống **event-driven**
-* Không đi đường vòng ❌
+> **RabbitMQ không có delay thật**
+> 👉 Delay là do **Queue giữ message**
+> 👉 Hết hạn → đẩy sang queue khác
